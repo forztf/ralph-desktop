@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ProjectMeta } from '$lib/types';
+  import type { ProjectMeta, ProjectStatus } from '$lib/types';
 
   interface Props {
     projects: ProjectMeta[];
@@ -10,9 +10,20 @@
 
   let { projects, selectedId, onSelect, onDelete }: Props = $props();
 
-  function getStatusIcon(project: ProjectMeta): string {
-    // Simplified - in real app we'd have status per project
-    return '⚪';
+  const statusConfig: Record<ProjectStatus, { icon: string; color: string; animate?: boolean }> = {
+    brainstorming: { icon: '💭', color: 'text-purple-500' },
+    ready: { icon: '⚪', color: 'text-gray-400' },
+    queued: { icon: '🔵', color: 'text-blue-500' },
+    running: { icon: '🟢', color: 'text-green-500', animate: true },
+    pausing: { icon: '🟡', color: 'text-yellow-500', animate: true },
+    paused: { icon: '🟡', color: 'text-yellow-500' },
+    done: { icon: '✅', color: 'text-green-600' },
+    failed: { icon: '❌', color: 'text-red-500' },
+    cancelled: { icon: '🚫', color: 'text-gray-500' }
+  };
+
+  function getStatusInfo(status: ProjectStatus) {
+    return statusConfig[status] || statusConfig.ready;
   }
 
   function formatDate(dateStr: string): string {
@@ -28,6 +39,7 @@
     </div>
   {:else}
     {#each projects as project (project.id)}
+      {@const statusInfo = getStatusInfo(project.status)}
       <div
         class="w-full p-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group cursor-pointer
           {selectedId === project.id ? 'bg-blue-50 dark:bg-blue-900/30 border-l-2 border-blue-600' : ''}"
@@ -37,7 +49,7 @@
         tabindex="0"
       >
         <div class="flex items-start gap-2">
-          <span class="text-lg mt-0.5">{getStatusIcon(project)}</span>
+          <span class="text-lg mt-0.5 {statusInfo.animate ? 'animate-pulse' : ''}">{statusInfo.icon}</span>
           <div class="flex-1 min-w-0">
             <div class="font-medium text-gray-800 dark:text-white truncate">
               {project.name}

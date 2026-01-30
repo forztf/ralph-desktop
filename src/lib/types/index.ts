@@ -23,6 +23,7 @@ export interface ProjectMeta {
   id: string;
   name: string;
   path: string;
+  status: ProjectStatus;
   createdAt: string;
   lastOpenedAt: string;
 }

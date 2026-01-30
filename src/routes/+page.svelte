@@ -58,6 +58,7 @@
           id: project.id,
           name: project.name,
           path: project.path,
+          status: project.status,
           createdAt: project.createdAt,
           lastOpenedAt: project.updatedAt
         });

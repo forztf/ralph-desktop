@@ -73,6 +73,7 @@ pub struct ProjectMeta {
     pub id: Uuid,
     pub name: String,
     pub path: String,
+    pub status: ProjectStatus,
     pub created_at: DateTime<Utc>,
     pub last_opened_at: DateTime<Utc>,
 }

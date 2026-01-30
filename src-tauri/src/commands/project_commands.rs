@@ -2,10 +2,18 @@ use super::*;
 use crate::engine::brainstorm::generate_design_doc;
 use std::path::PathBuf;
 
-/// List all projects
+/// List all projects with synced status
 #[tauri::command]
 pub async fn list_projects() -> Result<Vec<ProjectMeta>, String> {
-    let index = storage::load_project_index().map_err(|e| e.to_string())?;
+    let mut index = storage::load_project_index().map_err(|e| e.to_string())?;
+
+    // Sync status from each project's state
+    for meta in &mut index.projects {
+        if let Ok(state) = storage::load_project_state(&meta.id) {
+            meta.status = state.status;
+        }
+    }
+
     Ok(index.projects)
 }
 
@@ -20,6 +28,7 @@ pub async fn create_project(path: String, name: String) -> Result<ProjectState, 
         id,
         name: name.clone(),
         path: path.clone(),
+        status: ProjectStatus::Brainstorming,
         created_at: now,
         last_opened_at: now,
     };

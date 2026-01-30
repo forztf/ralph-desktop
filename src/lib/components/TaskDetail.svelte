@@ -3,6 +3,7 @@
   import type { LoopStoreState } from '$lib/stores/loop';
   import * as api from '$lib/services/tauri';
   import LogViewer from './LogViewer.svelte';
+  import PromptEditor from './PromptEditor.svelte';
 
   interface Props {
     project: ProjectState;
@@ -12,6 +13,7 @@
   let { project, loopState }: Props = $props();
 
   let starting = $state(false);
+  let showPrompt = $state(false);
 
   const statusConfig: Record<string, { icon: string; color: string; label: string }> = {
     ready: { icon: '⚪', color: 'text-gray-500', label: '就绪' },
@@ -89,24 +91,37 @@
     <!-- Task Info -->
     {#if project.task}
       <div class="mt-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-        <div class="grid grid-cols-3 gap-4 text-sm">
-          <div>
-            <span class="text-gray-500 dark:text-gray-400">CLI:</span>
-            <span class="ml-2 text-gray-800 dark:text-white font-medium">
-              {project.task.cli === 'claude' ? 'Claude Code' : 'Codex'}
-            </span>
+        <div class="flex items-center justify-between mb-2">
+          <div class="grid grid-cols-3 gap-4 text-sm flex-1">
+            <div>
+              <span class="text-gray-500 dark:text-gray-400">CLI:</span>
+              <span class="ml-2 text-gray-800 dark:text-white font-medium">
+                {project.task.cli === 'claude' ? 'Claude Code' : 'Codex'}
+              </span>
+            </div>
+            <div>
+              <span class="text-gray-500 dark:text-gray-400">Iteration:</span>
+              <span class="ml-2 text-gray-800 dark:text-white font-medium">
+                {loopState.currentIteration} / {project.task.maxIterations}
+              </span>
+            </div>
+            <div>
+              <span class="text-gray-500 dark:text-gray-400">Status:</span>
+              <span class="ml-2 {status.color} font-medium">{status.label}</span>
+            </div>
           </div>
-          <div>
-            <span class="text-gray-500 dark:text-gray-400">Iteration:</span>
-            <span class="ml-2 text-gray-800 dark:text-white font-medium">
-              {loopState.currentIteration} / {project.task.maxIterations}
-            </span>
-          </div>
-          <div>
-            <span class="text-gray-500 dark:text-gray-400">Status:</span>
-            <span class="ml-2 {status.color} font-medium">{status.label}</span>
-          </div>
+          <button
+            class="ml-4 px-3 py-1 text-sm bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 rounded text-gray-700 dark:text-gray-200"
+            onclick={() => showPrompt = !showPrompt}
+          >
+            {showPrompt ? '隐藏 Prompt' : '查看 Prompt'}
+          </button>
         </div>
+        {#if showPrompt}
+          <div class="mt-3">
+            <PromptEditor {project} />
+          </div>
+        {/if}
       </div>
     {/if}
   </div>
