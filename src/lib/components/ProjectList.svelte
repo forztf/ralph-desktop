@@ -28,10 +28,13 @@
     </div>
   {:else}
     {#each projects as project (project.id)}
-      <button
-        class="w-full p-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group
+      <div
+        class="w-full p-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group cursor-pointer
           {selectedId === project.id ? 'bg-blue-50 dark:bg-blue-900/30 border-l-2 border-blue-600' : ''}"
         onclick={() => onSelect(project.id)}
+        onkeydown={(e) => e.key === 'Enter' && onSelect(project.id)}
+        role="button"
+        tabindex="0"
       >
         <div class="flex items-start gap-2">
           <span class="text-lg mt-0.5">{getStatusIcon(project)}</span>
@@ -54,7 +57,7 @@
             ✕
           </button>
         </div>
-      </button>
+      </div>
     {/each}
   {/if}
 </div>

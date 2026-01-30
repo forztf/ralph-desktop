@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "ralph-desktop-cc",
+  "productName": "Ralph Desktop",
   "version": "0.1.0",
-  "identifier": "com.liuxiaopai.ralph-desktop-cc",
+  "identifier": "com.ralph-desktop.app",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -12,9 +12,12 @@
   "app": {
     "windows": [
       {
-        "title": "ralph-desktop-cc",
-        "width": 800,
-        "height": 600
+        "title": "Ralph Desktop",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 900,
+        "minHeight": 600,
+        "center": true
       }
     ],
     "security": {
@@ -30,6 +33,9 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "category": "DeveloperTool",
+    "shortDescription": "Visual Ralph Loop Controller",
+    "longDescription": "Ralph Desktop is a visual controller for Ralph Loop, enabling developers to run AI-assisted coding tasks with a beautiful UI."
   }
 }
