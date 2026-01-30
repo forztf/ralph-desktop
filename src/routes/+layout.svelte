@@ -4,10 +4,12 @@
   import { projects, currentProjectId, currentProject, updateProjects, updateCurrentProject, selectProject } from '$lib/stores/projects';
   import { config, availableClis, updateConfig, setAvailableClis } from '$lib/stores/settings';
   import { loopState, setStatus, setIteration, addLog, setError } from '$lib/stores/loop';
+  import { notifySuccess, notifyError, notifyWarning } from '$lib/stores/notifications';
   import * as api from '$lib/services/tauri';
   import type { LoopEvent } from '$lib/types';
   import type { RecoveryInfo } from '$lib/services/tauri';
   import RecoveryDialog from '$lib/components/RecoveryDialog.svelte';
+  import NotificationToast from '$lib/components/NotificationToast.svelte';
 
   let { children } = $props();
   let initialized = $state(false);
@@ -76,6 +78,15 @@
 
     if (event.type === 'error' && event.error) {
       setError(event.error);
+      notifyError('执行错误', event.error);
+    }
+
+    if (event.type === 'completed') {
+      notifySuccess('任务完成', `项目已成功完成所有迭代`);
+    }
+
+    if (event.type === 'maxIterationsReached') {
+      notifyWarning('达到最大迭代次数', `任务已在第 ${event.iteration} 次迭代后停止`);
     }
 
     if (event.iteration !== undefined) {
@@ -172,3 +183,5 @@
     </div>
   </div>
 {/if}
+
+<NotificationToast />
