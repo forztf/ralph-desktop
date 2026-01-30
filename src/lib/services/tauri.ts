@@ -126,8 +126,18 @@ export interface ConversationMessage {
   content: string;
 }
 
+export interface QuestionOption {
+  label: string;
+  description?: string;
+  value: string;
+}
+
 export interface AiBrainstormResponse {
-  message: string;
+  question: string;
+  description?: string;
+  options: QuestionOption[];
+  multiSelect: boolean;
+  allowOther: boolean;
   isComplete: boolean;
   generatedPrompt?: string;
 }

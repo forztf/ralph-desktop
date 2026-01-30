@@ -4,16 +4,33 @@ use std::process::Stdio;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
-/// AI brainstorm response
+/// AI brainstorm response with structured options
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AiBrainstormResponse {
-    /// The AI's response text (question or final prompt)
-    pub message: String,
+    /// The question text
+    pub question: String,
+    /// Optional description
+    pub description: Option<String>,
+    /// Available options (empty for text input)
+    pub options: Vec<QuestionOption>,
+    /// Whether multiple options can be selected
+    pub multi_select: bool,
+    /// Whether to show "Other" option for custom input
+    pub allow_other: bool,
     /// Whether brainstorming is complete
     pub is_complete: bool,
     /// The generated prompt (only when is_complete is true)
     pub generated_prompt: Option<String>,
+}
+
+/// Question option
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct QuestionOption {
+    pub label: String,
+    pub description: Option<String>,
+    pub value: String,
 }
 
 /// Conversation message
@@ -29,33 +46,61 @@ const BRAINSTORM_SYSTEM_PROMPT: &str = r#"你是一个帮助用户明确编程�
 ## 你的工作方式
 
 1. 首先理解用户的初始描述
-2. 提出 1-2 个关键问题来澄清需求（不要一次问太多）
+2. 提出问题来澄清需求，每次只问一个问题
 3. 根据用户回答，决定是否需要继续追问
 4. 当你认为已经收集到足够信息时，生成最终的任务 prompt
 
-## 问题类型参考
-
-- 任务类型：新项目/添加功能/重构/修复bug？
-- 技术栈：使用什么语言/框架？
-- 具体功能：需要实现哪些具体功能？
-- 测试要求：需要写测试吗？
-- 其他约束：有什么特殊要求？
-
 ## 输出格式
 
-如果还需要继续提问，直接输出你的问题。
+你必须严格按照以下 JSON 格式输出，不要输出其他内容：
 
-如果已经收集够信息，请输出：
+如果需要提问（带选项）：
+```json
+{
+  "question": "你的问题",
+  "description": "可选的问题描述",
+  "options": [
+    {"label": "选项标题", "description": "选项说明", "value": "选项值"},
+    {"label": "选项标题2", "description": "选项说明2", "value": "选项值2"}
+  ],
+  "multiSelect": false,
+  "allowOther": true,
+  "isComplete": false
+}
+```
 
-<brainstorm_complete>
-[在这里输出完整的任务 prompt，包括：
-- 任务描述
-- 技术要求
-- 具体功能列表
-- 完成标准
-- 完成信号：<done>COMPLETE</done>
-]
-</brainstorm_complete>
+如果需要用户输入文本（不带选项）：
+```json
+{
+  "question": "你的问题",
+  "description": "可选的描述",
+  "options": [],
+  "multiSelect": false,
+  "allowOther": false,
+  "isComplete": false
+}
+```
+
+如果已经收集够信息，准备生成 prompt：
+```json
+{
+  "question": "需求收集完成",
+  "description": "我已经了解了你的需求",
+  "options": [],
+  "multiSelect": false,
+  "allowOther": false,
+  "isComplete": true,
+  "generatedPrompt": "完整的任务 prompt，包括任务描述、技术要求、具体功能列表、完成标准，最后加上完成信号：<done>COMPLETE</done>"
+}
+```
+
+## 常见问题类型
+
+1. 任务类型：新项目/添加功能/重构/修复bug
+2. 技术栈选择
+3. 具体功能需求
+4. 测试要求
+5. 其他约束
 
 请用简洁友好的中文与用户对话。"#;
 
@@ -77,7 +122,7 @@ pub async fn run_ai_brainstorm(
 
     // Create the prompt for Claude
     let prompt = format!(
-        "{}\n\n## 当前对话\n\n{}\n\n请继续对话，提出问题或生成最终 prompt。",
+        "{}\n\n## 当前对话\n\n{}\n\n请根据对话历史，输出下一个问题的 JSON（或完成的 prompt）。只输出 JSON，不要其他内容。",
         BRAINSTORM_SYSTEM_PROMPT,
         context
     );
@@ -85,27 +130,54 @@ pub async fn run_ai_brainstorm(
     // Call Claude Code CLI
     let output = call_claude_cli(working_dir, &prompt).await?;
 
-    // Parse the response
-    if output.contains("<brainstorm_complete>") {
-        // Extract the generated prompt
-        let start = output.find("<brainstorm_complete>")
-            .map(|i| i + "<brainstorm_complete>".len())
-            .unwrap_or(0);
-        let end = output.find("</brainstorm_complete>").unwrap_or(output.len());
-        let generated_prompt = output[start..end].trim().to_string();
+    // Parse JSON response
+    parse_ai_response(&output)
+}
 
-        Ok(AiBrainstormResponse {
-            message: "好的，我已经了解了你的需求。以下是生成的任务 prompt：".to_string(),
-            is_complete: true,
-            generated_prompt: Some(generated_prompt),
-        })
-    } else {
-        Ok(AiBrainstormResponse {
-            message: output.trim().to_string(),
-            is_complete: false,
-            generated_prompt: None,
-        })
+/// Parse AI response JSON
+fn parse_ai_response(output: &str) -> Result<AiBrainstormResponse, String> {
+    // Try to extract JSON from the output
+    let json_str = extract_json(output)?;
+
+    // Parse the JSON
+    serde_json::from_str::<AiBrainstormResponse>(&json_str)
+        .map_err(|e| format!("Failed to parse AI response: {}. Raw: {}", e, json_str))
+}
+
+/// Extract JSON from output (handles markdown code blocks)
+fn extract_json(output: &str) -> Result<String, String> {
+    let trimmed = output.trim();
+
+    // Try to find JSON in code block
+    if let Some(start) = trimmed.find("```json") {
+        let json_start = start + 7;
+        if let Some(end) = trimmed[json_start..].find("```") {
+            return Ok(trimmed[json_start..json_start + end].trim().to_string());
+        }
     }
+
+    // Try to find JSON in generic code block
+    if let Some(start) = trimmed.find("```") {
+        let block_start = start + 3;
+        // Skip language identifier if present
+        let json_start = if let Some(newline) = trimmed[block_start..].find('\n') {
+            block_start + newline + 1
+        } else {
+            block_start
+        };
+        if let Some(end) = trimmed[json_start..].find("```") {
+            return Ok(trimmed[json_start..json_start + end].trim().to_string());
+        }
+    }
+
+    // Try to find raw JSON object
+    if let Some(start) = trimmed.find('{') {
+        if let Some(end) = trimmed.rfind('}') {
+            return Ok(trimmed[start..=end].to_string());
+        }
+    }
+
+    Err(format!("No JSON found in output: {}", output))
 }
 
 /// Call Claude Code CLI and get response
