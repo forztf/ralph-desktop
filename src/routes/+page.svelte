@@ -1,156 +1,167 @@
 <script lang="ts">
-  import { invoke } from "@tauri-apps/api/core";
+  import { projects, currentProjectId, currentProject, selectProject, addProject, removeProject, updateCurrentProject } from '$lib/stores/projects';
+  import { loopState, resetLoop, clearLogs } from '$lib/stores/loop';
+  import { config, availableClis } from '$lib/stores/settings';
+  import * as api from '$lib/services/tauri';
+  import type { ProjectState, CliType } from '$lib/types';
+  import ProjectList from '$lib/components/ProjectList.svelte';
+  import TaskDetail from '$lib/components/TaskDetail.svelte';
+  import BrainstormWizard from '$lib/components/BrainstormWizard.svelte';
 
-  let name = $state("");
-  let greetMsg = $state("");
+  let showBrainstorm = $state(false);
+  let creatingProject = $state(false);
 
-  async function greet(event: Event) {
-    event.preventDefault();
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    greetMsg = await invoke("greet", { name });
+  // Reactive: load project details when selection changes
+  $effect(() => {
+    const id = $currentProjectId;
+    if (id) {
+      loadProjectDetails(id);
+    } else {
+      updateCurrentProject(null as any);
+    }
+  });
+
+  async function loadProjectDetails(id: string) {
+    try {
+      const project = await api.getProject(id);
+      updateCurrentProject(project);
+
+      // Check if need brainstorm
+      if (project.status === 'brainstorming') {
+        showBrainstorm = true;
+      } else {
+        showBrainstorm = false;
+      }
+    } catch (error) {
+      console.error('Failed to load project:', error);
+    }
   }
+
+  async function handleCreateProject() {
+    creatingProject = true;
+    try {
+      // Use Tauri dialog to select directory
+      const { open } = await import('@tauri-apps/plugin-dialog');
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: '选择项目目录'
+      });
+
+      if (selected) {
+        const path = selected as string;
+        const name = path.split('/').pop() || 'New Project';
+        const project = await api.createProject(path, name);
+        addProject({
+          id: project.id,
+          name: project.name,
+          path: project.path,
+          createdAt: project.createdAt,
+          lastOpenedAt: project.updatedAt
+        });
+        selectProject(project.id);
+      }
+    } catch (error) {
+      console.error('Failed to create project:', error);
+    } finally {
+      creatingProject = false;
+    }
+  }
+
+  async function handleDeleteProject(id: string) {
+    if (confirm('确定要删除这个项目吗？')) {
+      try {
+        await api.deleteProject(id);
+        removeProject(id);
+      } catch (error) {
+        console.error('Failed to delete project:', error);
+      }
+    }
+  }
+
+  function handleBrainstormComplete(project: ProjectState) {
+    updateCurrentProject(project);
+    showBrainstorm = false;
+    resetLoop();
+    clearLogs();
+  }
+
+  // Get running count
+  const runningCount = $derived($projects.filter(p => {
+    // This is simplified - in real app we'd track status per project
+    return false;
+  }).length);
+
+  const availableCliCount = $derived($availableClis.filter(c => c.available).length);
 </script>
 
-<main class="container">
-  <h1>Welcome to Tauri + Svelte</h1>
+<div class="flex h-screen bg-gray-100 dark:bg-gray-900">
+  <!-- Sidebar -->
+  <div class="w-72 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+    <!-- Header -->
+    <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+      <h1 class="text-xl font-bold text-gray-800 dark:text-white">Ralph Desktop</h1>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Visual Ralph Loop Controller</p>
+    </div>
 
-  <div class="row">
-    <a href="https://vite.dev" target="_blank">
-      <img src="/vite.svg" class="logo vite" alt="Vite Logo" />
-    </a>
-    <a href="https://tauri.app" target="_blank">
-      <img src="/tauri.svg" class="logo tauri" alt="Tauri Logo" />
-    </a>
-    <a href="https://svelte.dev" target="_blank">
-      <img src="/svelte.svg" class="logo svelte-kit" alt="SvelteKit Logo" />
-    </a>
+    <!-- New Project Button -->
+    <div class="p-3">
+      <button
+        class="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
+        onclick={handleCreateProject}
+        disabled={creatingProject || availableCliCount === 0}
+      >
+        <span class="text-lg">+</span>
+        <span>New Project</span>
+      </button>
+      {#if availableCliCount === 0}
+        <p class="text-xs text-red-500 mt-2 text-center">未检测到 CLI，请先安装 Claude Code 或 Codex</p>
+      {/if}
+    </div>
+
+    <!-- Project List -->
+    <div class="flex-1 overflow-y-auto">
+      <ProjectList
+        projects={$projects}
+        selectedId={$currentProjectId}
+        onSelect={selectProject}
+        onDelete={handleDeleteProject}
+      />
+    </div>
+
+    <!-- Status Bar -->
+    <div class="p-3 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
+      <div class="flex justify-between">
+        <span>CLI: {$availableClis.find(c => c.available)?.name || 'None'}</span>
+        <span>Projects: {$projects.length}</span>
+      </div>
+    </div>
   </div>
-  <p>Click on the Tauri, Vite, and SvelteKit logos to learn more.</p>
 
-  <form class="row" onsubmit={greet}>
-    <input id="greet-input" placeholder="Enter a name..." bind:value={name} />
-    <button type="submit">Greet</button>
-  </form>
-  <p>{greetMsg}</p>
-</main>
-
-<style>
-.logo.vite:hover {
-  filter: drop-shadow(0 0 2em #747bff);
-}
-
-.logo.svelte-kit:hover {
-  filter: drop-shadow(0 0 2em #ff3e00);
-}
-
-:root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 400;
-
-  color: #0f0f0f;
-  background-color: #f6f6f6;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
-}
-
-.container {
-  margin: 0;
-  padding-top: 10vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  text-align: center;
-}
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: 0.75s;
-}
-
-.logo.tauri:hover {
-  filter: drop-shadow(0 0 2em #24c8db);
-}
-
-.row {
-  display: flex;
-  justify-content: center;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-
-a:hover {
-  color: #535bf2;
-}
-
-h1 {
-  text-align: center;
-}
-
-input,
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  color: #0f0f0f;
-  background-color: #ffffff;
-  transition: border-color 0.25s;
-  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
-}
-
-button {
-  cursor: pointer;
-}
-
-button:hover {
-  border-color: #396cd8;
-}
-button:active {
-  border-color: #396cd8;
-  background-color: #e8e8e8;
-}
-
-input,
-button {
-  outline: none;
-}
-
-#greet-input {
-  margin-right: 5px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color: #f6f6f6;
-    background-color: #2f2f2f;
-  }
-
-  a:hover {
-    color: #24c8db;
-  }
-
-  input,
-  button {
-    color: #ffffff;
-    background-color: #0f0f0f98;
-  }
-  button:active {
-    background-color: #0f0f0f69;
-  }
-}
-
-</style>
+  <!-- Main Content -->
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {#if $currentProject}
+      {#if showBrainstorm}
+        <BrainstormWizard
+          project={$currentProject}
+          onComplete={handleBrainstormComplete}
+          onCancel={() => showBrainstorm = false}
+        />
+      {:else}
+        <TaskDetail
+          project={$currentProject}
+          loopState={$loopState}
+        />
+      {/if}
+    {:else}
+      <!-- Empty State -->
+      <div class="flex-1 flex items-center justify-center">
+        <div class="text-center text-gray-500 dark:text-gray-400">
+          <div class="text-6xl mb-4">📁</div>
+          <h2 class="text-xl font-medium mb-2">选择或创建一个项目</h2>
+          <p class="text-sm">点击左侧 "New Project" 开始</p>
+        </div>
+      </div>
+    {/if}
+  </div>
+</div>
