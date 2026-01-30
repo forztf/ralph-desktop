@@ -1,87 +1,199 @@
 # Ralph Desktop
 
-一个可视化的 Ralph Loop 控制器桌面应用，使用 Tauri 2.x + Svelte 5 + TypeScript + Rust 构建。
+**Start vague. Ralph Loop until perfect.**
 
-## 功能特性
+A visual controller for AI coding agents that helps you brainstorm requirements and execute tasks through persistent iteration.
 
-### MVP 功能
+[中文文档](./README.zh-CN.md)
 
-- **项目管理**：创建、删除、切换项目
-- **Brainstorm 引擎**：通过苏格拉底式问答引导生成任务 prompt
-- **Loop 执行引擎**：支持 pause/resume/stop 控制
-- **日志查看器**：实时显示 CLI 输出，支持 ANSI 颜色
-- **恢复机制**：检测中断任务并提供恢复选项
-- **通知系统**：Toast 消息提示任务状态
-- **队列管理**：支持并发项目队列
-- **键盘快捷键**：Cmd+N/Cmd+,/Cmd+? 等快捷操作
-- **主题支持**：浅色/深色/跟随系统
+---
 
-### 支持的 CLI
+## Why Ralph Desktop?
 
-- Claude Code (`claude`)
-- OpenAI Codex (`codex`)
+### The Problem
 
-## 技术栈
+Using AI coding agents like Claude Code or Codex can be frustrating:
 
-- **前端**：Svelte 5 + TypeScript + Tailwind CSS 4
-- **后端**：Rust + Tauri 2.x
-- **构建**：Vite + Cargo
+| Pain Point | What Happens |
+|------------|--------------|
+| **"I don't know how to write prompts"** | You give vague instructions, AI produces garbage |
+| **"AI runs once and stops"** | You manually retry over and over, hoping for better results |
+| **"Setting up Ralph Loop is hard"** | The methodology exists, but configuring bash while loops and managing state is tedious for newcomers |
 
-## 项目结构
+### The Solution
+
+Ralph Desktop solves all three:
+
+1. **AI Brainstorm** — Don't write prompts. Just describe your vague idea, and AI will interview you to clarify requirements and generate a high-quality prompt automatically.
+
+2. **Ralph Loop Execution** — One click to start, then AI iterates autonomously until the task is complete or hits your configured limit.
+
+3. **Visual Control** — Real-time logs, pause/resume/stop anytime. You're always in control.
+
+---
+
+## What is Ralph Loop?
+
+**Ralph Loop** is an AI coding methodology introduced by [Geoffrey Huntley](https://ghuntley.com/). Named after Ralph Wiggum from *The Simpsons* — a character who seems simple but persists relentlessly — the approach embodies "brute-force elegance."
+
+### How It Works
+
+Instead of running an AI agent once and hoping for the best, Ralph Loop:
+
+1. **Iterates continuously** — The AI executes, reviews its own output, fixes mistakes, and repeats
+2. **Uses fresh context each iteration** — Avoids "context rot" by treating each loop as a new conversation with the spec as source of truth
+3. **Stops on completion signal** — Detects when the task is truly done (via `<done>COMPLETE</done>` or similar markers)
+
+### Why It's Effective
+
+- **Quantity breeds quality** — Like Monte Carlo tree search, many attempts find better solutions
+- **Self-correction** — AI catches and fixes its own errors over multiple passes
+- **Works for complex tasks** — Breaks down large problems that exceed a single context window
+
+> *"Dumb loop. Smart results."*
+
+---
+
+## How It Works
 
 ```
-ralph-desktop-cc/
-├── src/                    # Svelte 前端
-│   ├── lib/
-│   │   ├── components/     # UI 组件
-│   │   ├── services/       # Tauri API 封装
-│   │   ├── stores/         # Svelte stores
-│   │   └── types/          # TypeScript 类型
-│   └── routes/             # SvelteKit 路由
-├── src-tauri/              # Rust 后端
-│   └── src/
-│       ├── adapters/       # CLI 适配器
-│       ├── commands/       # Tauri 命令
-│       ├── engine/         # Loop/Brainstorm 引擎
-│       ├── security/       # 安全工具
-│       └── storage/        # 数据持久化
-└── docs/                   # 文档
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   1. DESCRIBE   │ ──▶ │  2. BRAINSTORM  │ ──▶ │    3. LOOP      │ ──▶ │   4. CONTROL    │
+│                 │     │                 │     │                 │     │                 │
+│  "I want to     │     │  AI asks smart  │     │  AI executes    │     │  Watch logs,    │
+│   build a..."   │     │  questions,     │     │  repeatedly     │     │  pause/resume,  │
+│                 │     │  generates      │     │  until done     │     │  stop anytime   │
+│                 │     │  perfect prompt │     │                 │     │                 │
+└─────────────────┘     └─────────────────┘     └─────────────────┘     └─────────────────┘
 ```
 
-## 开发
+1. **Describe** — Start with a vague idea. No need for perfect prompts.
+2. **Brainstorm** — AI interviews you through Socratic dialogue, then generates a detailed task specification.
+3. **Loop** — Click "Start" and Ralph Loop takes over, iterating until the task is complete.
+4. **Control** — Monitor progress in real-time. Pause, resume, or stop at any point.
 
-### 前置要求
+---
+
+## Features
+
+- **AI Brainstorm** — Conversational requirement gathering with automatic prompt generation
+- **Ralph Loop Engine** — Persistent iteration with completion detection
+- **Multi-CLI Support** — Works with Claude Code, Codex, and OpenCode
+- **Visual Dashboard** — Real-time logs with ANSI color support
+- **Execution Control** — Pause / Resume / Stop at any time
+- **Project Management** — Create, switch, and manage multiple projects
+- **Task Recovery** — Detect and resume interrupted tasks
+- **Keyboard Shortcuts** — Cmd+N (new project), Cmd+, (settings), Cmd+? (help)
+- **Theme Support** — Light / Dark / System
+- **Multi-language UI** — 12 languages supported (see below)
+
+---
+
+## Supported CLIs
+
+Ralph Desktop works with any AI coding CLI that supports headless execution:
+
+| CLI | Status | Installation |
+|-----|--------|--------------|
+| [Claude Code](https://github.com/anthropics/claude-code) | ✅ Supported | `npm install -g @anthropic-ai/claude-code` |
+| [Codex](https://github.com/openai/codex) | ✅ Supported | `npm install -g @openai/codex` |
+| [OpenCode](https://github.com/opencode-ai/opencode) | 🚧 Coming Soon | — |
+
+**Prerequisites:** You must have at least one of the above CLIs installed before using Ralph Desktop.
+
+---
+
+## Supported Languages
+
+Ralph Desktop supports 12 languages out of the box:
+
+| Language | Code | Language | Code |
+|----------|------|----------|------|
+| English | `en` | Português | `pt` |
+| 简体中文 | `zh-CN` | Русский | `ru` |
+| 繁體中文 | `zh-TW` | 日本語 | `ja` |
+| Español | `es` | Deutsch | `de` |
+| हिन्दी | `hi` | Français | `fr` |
+| العربية | `ar` | বাংলা | `bn` |
+
+Change language in **Settings** (Cmd+,). The AI Brainstorm conversation automatically adapts to your language.
+
+---
+
+## Installation
+
+Download the latest release for your platform:
+
+| Platform | Download |
+|----------|----------|
+| macOS (Apple Silicon) | [.dmg](https://github.com/liuxiaopai-ai/ralph-desktop/releases/latest) |
+| macOS (Intel) | [.dmg](https://github.com/liuxiaopai-ai/ralph-desktop/releases/latest) |
+| Windows | [.msi](https://github.com/liuxiaopai-ai/ralph-desktop/releases/latest) / [.exe](https://github.com/liuxiaopai-ai/ralph-desktop/releases/latest) |
+| Linux | [.deb](https://github.com/liuxiaopai-ai/ralph-desktop/releases/latest) / [.AppImage](https://github.com/liuxiaopai-ai/ralph-desktop/releases/latest) |
+
+> **Note:** The app is not code-signed. On macOS, right-click and select "Open" to bypass Gatekeeper. On Windows, click "More info" → "Run anyway" when SmartScreen appears.
+
+---
+
+## Quick Start
+
+1. **Install a CLI** — Make sure you have Claude Code, Codex, or OpenCode installed
+2. **Download Ralph Desktop** — Get the installer for your platform
+3. **Create a Project** — Click "New Project" (Cmd+N) and select a working directory
+4. **Brainstorm** — Describe what you want to build, let AI help you clarify
+5. **Start Loop** — Click "Start Execution" and watch the magic happen
+
+---
+
+## Development
+
+### Prerequisites
 
 - Node.js 18+
 - pnpm
 - Rust 1.70+
 - Tauri CLI
 
-### 安装依赖
+### Setup
 
 ```bash
+# Install dependencies
 pnpm install
-```
 
-### 开发模式
-
-```bash
+# Run in development mode
 pnpm tauri dev
-```
 
-### 构建
-
-```bash
+# Build for production
 pnpm tauri build
 ```
 
-## 数据存储
+### Tech Stack
 
-应用数据存储在：
-- macOS: `~/Library/Application Support/com.ralph.desktop/`
-- Windows: `%APPDATA%/com.ralph.desktop/`
-- Linux: `~/.config/com.ralph.desktop/`
+- **Frontend:** Svelte 5 + TypeScript + Tailwind CSS 4
+- **Backend:** Rust + Tauri 2.x
+- **Build:** Vite + Cargo
 
-## 许可证
+---
+
+## Data Storage
+
+Application data is stored at:
+
+| Platform | Path |
+|----------|------|
+| macOS | `~/Library/Application Support/com.ralph.desktop/` |
+| Windows | `%APPDATA%/com.ralph.desktop/` |
+| Linux | `~/.config/com.ralph.desktop/` |
+
+---
+
+## Credits
+
+- **Ralph Loop Methodology** — [Geoffrey Huntley](https://ghuntley.com/)
+- **Built with** — [Tauri](https://tauri.app/), [Svelte](https://svelte.dev/), [Rust](https://www.rust-lang.org/)
+
+---
+
+## License
 
 MIT
