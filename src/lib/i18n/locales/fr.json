@@ -145,7 +145,8 @@
     "installedClis": "CLIs installés",
     "cancel": "Annuler",
     "save": "Enregistrer",
-    "saving": "Enregistrement..."
+    "saving": "Enregistrement...",
+    "languageSystemHint": "Langue système actuelle : {language}"
   },
   "notifications": {
     "executionErrorTitle": "Erreur d'exécution",

@@ -145,7 +145,8 @@
     "installedClis": "已安装的 CLI",
     "cancel": "取消",
     "save": "保存",
-    "saving": "保存中..."
+    "saving": "保存中...",
+    "languageSystemHint": "当前系统语言：{language}"
   },
   "notifications": {
     "executionErrorTitle": "执行错误",

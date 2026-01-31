@@ -35,6 +35,8 @@
     }
   }
 
+  const fieldClass = 'w-full h-10 px-3 rounded-lg border border-vscode bg-vscode-input text-vscode focus-vscode';
+
   const languageOptions = $derived([
     { value: 'system', label: $_('settings.languageSystem') },
     { value: 'en', label: 'English' },
@@ -50,6 +52,34 @@
     { value: 'fr', label: 'Français' },
     { value: 'bn', label: 'বাংলা' }
   ]);
+
+  const languageMap = $derived(() => {
+    const map = new Map<string, string>();
+    for (const option of languageOptions) {
+      map.set(option.value, option.label);
+    }
+    return map;
+  });
+
+  function normalizeLocale(input: string) {
+    const value = input.trim();
+    if (value.toLowerCase().startsWith('zh')) {
+      if (value.toLowerCase().includes('tw') || value.toLowerCase().includes('hk')) {
+        return 'zh-TW';
+      }
+      return 'zh-CN';
+    }
+    return value.split('-')[0];
+  }
+
+  const systemLanguageLabel = $derived(() => {
+    if (typeof navigator === 'undefined') {
+      return languageMap.get('en') || 'English';
+    }
+    const raw = navigator.language || 'en';
+    const normalized = normalizeLocale(raw);
+    return languageMap.get(raw) || languageMap.get(normalized) || raw;
+  });
 </script>
 
 <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -68,13 +98,13 @@
     <!-- Content -->
     <div class="flex-1 overflow-y-auto p-4 space-y-6">
       <!-- CLI Settings -->
-      <section>
+      <section class="space-y-3 pb-4 border-b border-vscode">
         <h3 class="text-sm font-medium text-vscode mb-3">{$_('settings.cliSection')}</h3>
         <div class="space-y-3">
           <div>
             <label class="block text-sm text-vscode-muted mb-1">{$_('settings.defaultCli')}</label>
             <select
-              class="w-full p-2 border border-vscode rounded-lg bg-vscode-input text-vscode focus-vscode"
+              class={fieldClass}
               bind:value={localConfig.defaultCli}
             >
               {#each $availableClis.filter(c => c.available) as cli}
@@ -86,14 +116,14 @@
       </section>
 
       <!-- Loop Settings -->
-      <section>
+      <section class="space-y-3 pb-4 border-b border-vscode">
         <h3 class="text-sm font-medium text-vscode mb-3">{$_('settings.loopSection')}</h3>
         <div class="space-y-3">
           <div>
             <label class="block text-sm text-vscode-muted mb-1">{$_('settings.defaultMaxIterations')}</label>
             <input
               type="number"
-              class="w-full p-2 border border-vscode rounded-lg bg-vscode-input text-vscode focus-vscode"
+              class={fieldClass}
               bind:value={localConfig.defaultMaxIterations}
               min="1"
               max="500"
@@ -103,7 +133,7 @@
             <label class="block text-sm text-vscode-muted mb-1">{$_('settings.maxConcurrent')}</label>
             <input
               type="number"
-              class="w-full p-2 border border-vscode rounded-lg bg-vscode-input text-vscode focus-vscode"
+              class={fieldClass}
               bind:value={localConfig.maxConcurrentProjects}
               min="1"
               max="10"
@@ -113,7 +143,7 @@
             <label class="block text-sm text-vscode-muted mb-1">{$_('settings.iterationTimeout')}</label>
             <input
               type="number"
-              class="w-full p-2 border border-vscode rounded-lg bg-vscode-input text-vscode focus-vscode"
+              class={fieldClass}
               value={localConfig.iterationTimeoutMs / 60000}
               oninput={(e) => {
                 const minutes = Number.parseInt(e.currentTarget.value, 10);
@@ -126,7 +156,7 @@
             <label class="block text-sm text-vscode-muted mb-1">{$_('settings.idleTimeout')}</label>
             <input
               type="number"
-              class="w-full p-2 border border-vscode rounded-lg bg-vscode-input text-vscode focus-vscode"
+              class={fieldClass}
               value={localConfig.idleTimeoutMs / 60000}
               oninput={(e) => {
                 const minutes = Number.parseInt(e.currentTarget.value, 10);
@@ -139,13 +169,13 @@
       </section>
 
       <!-- Appearance -->
-      <section>
+      <section class="space-y-3 pb-4 border-b border-vscode">
         <h3 class="text-sm font-medium text-vscode mb-3">{$_('settings.appearance')}</h3>
         <div class="space-y-3">
           <div>
             <label class="block text-sm text-vscode-muted mb-1">{$_('settings.theme')}</label>
             <select
-              class="w-full p-2 border border-vscode rounded-lg bg-vscode-input text-vscode focus-vscode"
+              class={fieldClass}
               bind:value={localConfig.theme}
             >
               <option value="system">{$_('settings.themeSystem')}</option>
@@ -156,26 +186,31 @@
           <div>
             <label class="block text-sm text-vscode-muted mb-1">{$_('settings.language')}</label>
             <select
-              class="w-full p-2 border border-vscode rounded-lg bg-vscode-input text-vscode focus-vscode"
+              class={fieldClass}
               bind:value={localConfig.language}
             >
               {#each languageOptions as option}
                 <option value={option.value}>{option.label}</option>
               {/each}
             </select>
+            {#if localConfig.language === 'system'}
+              <div class="text-xs text-vscode-muted mt-1">
+                {$_('settings.languageSystemHint', { language: systemLanguageLabel })}
+              </div>
+            {/if}
           </div>
         </div>
       </section>
 
       <!-- Storage -->
-      <section>
+      <section class="space-y-3 pb-4 border-b border-vscode">
         <h3 class="text-sm font-medium text-vscode mb-3">{$_('settings.storage')}</h3>
         <div class="space-y-3">
           <div>
             <label class="block text-sm text-vscode-muted mb-1">{$_('settings.logRetention')}</label>
             <input
               type="number"
-              class="w-full p-2 border border-vscode rounded-lg bg-vscode-input text-vscode focus-vscode"
+              class={fieldClass}
               bind:value={localConfig.logRetentionDays}
               min="1"
               max="90"
@@ -185,7 +220,7 @@
       </section>
 
       <!-- Security -->
-      <section>
+      <section class="space-y-3 pb-4 border-b border-vscode">
         <h3 class="text-sm font-medium text-vscode mb-3">{$_('settings.security')}</h3>
         <div class="space-y-3">
           <div class="flex items-center justify-between">
@@ -203,7 +238,7 @@
               </div>
             </div>
             <button
-              class="px-3 py-1 text-sm bg-vscode-input border border-vscode text-vscode-error rounded hover:bg-vscode-hover"
+              class="px-3 py-1.5 text-sm bg-vscode-input border border-vscode text-vscode-error rounded hover:bg-vscode-hover"
               onclick={handleResetPermissions}
             >
               {$_('settings.reset')}
@@ -213,11 +248,11 @@
       </section>
 
       <!-- CLI Info -->
-      <section>
+      <section class="space-y-3">
         <h3 class="text-sm font-medium text-vscode mb-3">{$_('settings.installedClis')}</h3>
         <div class="space-y-2">
           {#each $availableClis as cli}
-            <div class="flex items-center justify-between p-2 bg-vscode-input border border-vscode rounded">
+            <div class="flex items-center justify-between px-3 py-2 bg-vscode-input border border-vscode rounded-lg">
               <div class="flex items-center gap-2">
                 <span class={cli.available ? 'text-vscode-success' : 'text-vscode-muted'}>
                   {cli.available ? '✓' : '✕'}

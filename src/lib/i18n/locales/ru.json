@@ -145,7 +145,8 @@
     "installedClis": "Установленные CLI",
     "cancel": "Отмена",
     "save": "Сохранить",
-    "saving": "Сохранение..."
+    "saving": "Сохранение...",
+    "languageSystemHint": "Текущий язык системы: {language}"
   },
   "notifications": {
     "executionErrorTitle": "Ошибка выполнения",

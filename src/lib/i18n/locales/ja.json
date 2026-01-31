@@ -145,7 +145,8 @@
     "installedClis": "インストール済み CLI",
     "cancel": "キャンセル",
     "save": "保存",
-    "saving": "保存中..."
+    "saving": "保存中...",
+    "languageSystemHint": "現在のシステム言語: {language}"
   },
   "notifications": {
     "executionErrorTitle": "実行エラー",

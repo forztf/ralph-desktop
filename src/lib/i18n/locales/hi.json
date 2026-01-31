@@ -145,7 +145,8 @@
     "installedClis": "इंस्टॉल्ड CLIs",
     "cancel": "रद्द करें",
     "save": "सहेजें",
-    "saving": "सहेजा जा रहा..."
+    "saving": "सहेजा जा रहा...",
+    "languageSystemHint": "वर्तमान सिस्टम भाषा: {language}"
   },
   "notifications": {
     "executionErrorTitle": "एक्ज़िक्यूशन त्रुटि",

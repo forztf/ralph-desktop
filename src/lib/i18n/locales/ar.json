@@ -145,7 +145,8 @@
     "installedClis": "CLIs المثبتة",
     "cancel": "إلغاء",
     "save": "حفظ",
-    "saving": "جارٍ الحفظ..."
+    "saving": "جارٍ الحفظ...",
+    "languageSystemHint": "لغة النظام الحالية: {language}"
   },
   "notifications": {
     "executionErrorTitle": "خطأ في التنفيذ",

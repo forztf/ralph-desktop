@@ -145,7 +145,8 @@
     "installedClis": "ইনস্টলড CLI",
     "cancel": "বাতিল",
     "save": "সেভ",
-    "saving": "সেভ হচ্ছে..."
+    "saving": "সেভ হচ্ছে...",
+    "languageSystemHint": "বর্তমান সিস্টেম ভাষা: {language}"
   },
   "notifications": {
     "executionErrorTitle": "এক্সিকিউশন ত্রুটি",

@@ -145,7 +145,8 @@
     "installedClis": "Installierte CLIs",
     "cancel": "Abbrechen",
     "save": "Speichern",
-    "saving": "Speichern..."
+    "saving": "Speichern...",
+    "languageSystemHint": "Aktuelle Systemsprache: {language}"
   },
   "notifications": {
     "executionErrorTitle": "Ausführungsfehler",
