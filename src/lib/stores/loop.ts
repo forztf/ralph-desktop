@@ -1,4 +1,4 @@
-import { writable, derived } from 'svelte/store';
+import { writable } from 'svelte/store';
 import type { LogEntry, ProjectStatus } from '../types';
 
 export interface LoopStoreState {
@@ -7,53 +7,109 @@ export interface LoopStoreState {
   maxIterations: number;
   logs: LogEntry[];
   lastError: string | null;
+  startedAt: Date | null;
+  endedAt: Date | null;
+  elapsedMs: number | null;
+  summary: string | null;
+  summaryUpdatedAt: Date | null;
 }
 
-const initialState: LoopStoreState = {
+const createInitialState = (): LoopStoreState => ({
   status: 'ready',
   currentIteration: 0,
   maxIterations: 50,
   logs: [],
-  lastError: null
-};
+  lastError: null,
+  startedAt: null,
+  endedAt: null,
+  elapsedMs: null,
+  summary: null,
+  summaryUpdatedAt: null
+});
 
-export const loopState = writable<LoopStoreState>(initialState);
+export const loopStates = writable<Record<string, LoopStoreState>>({});
 
-// Derived stores
-export const isRunning = derived(loopState, ($state) => $state.status === 'running');
-export const isPaused = derived(loopState, ($state) => $state.status === 'paused');
-export const isPausing = derived(loopState, ($state) => $state.status === 'pausing');
-export const isDone = derived(loopState, ($state) => $state.status === 'done');
-export const isFailed = derived(loopState, ($state) => $state.status === 'failed');
+export function getLoopState(
+  states: Record<string, LoopStoreState>,
+  projectId: string | null | undefined
+): LoopStoreState {
+  if (!projectId) {
+    return createInitialState();
+  }
+  return states[projectId] ?? createInitialState();
+}
+
+function updateProjectState(
+  projectId: string,
+  updater: (state: LoopStoreState) => LoopStoreState
+) {
+  loopStates.update(states => {
+    const current = states[projectId] ?? createInitialState();
+    const next = updater(current);
+    return { ...states, [projectId]: next };
+  });
+}
 
 // Actions
-export function resetLoop() {
-  loopState.set(initialState);
+export function resetLoop(projectId: string) {
+  updateProjectState(projectId, () => createInitialState());
 }
 
-export function setMaxIterations(max: number) {
-  loopState.update(state => ({ ...state, maxIterations: max }));
+export function setMaxIterations(projectId: string, max: number) {
+  updateProjectState(projectId, state => ({ ...state, maxIterations: max }));
 }
 
-export function addLog(entry: LogEntry) {
-  loopState.update(state => ({
+export function addLog(projectId: string, entry: LogEntry) {
+  updateProjectState(projectId, state => ({
     ...state,
     logs: [...state.logs.slice(-999), entry] // Keep last 1000 logs
   }));
 }
 
-export function setStatus(status: ProjectStatus) {
-  loopState.update(state => ({ ...state, status }));
+export function setStatus(projectId: string, status: ProjectStatus) {
+  updateProjectState(projectId, state => ({ ...state, status }));
 }
 
-export function setIteration(iteration: number) {
-  loopState.update(state => ({ ...state, currentIteration: iteration }));
+export function setIteration(projectId: string, iteration: number) {
+  updateProjectState(projectId, state => ({ ...state, currentIteration: iteration }));
 }
 
-export function setError(error: string | null) {
-  loopState.update(state => ({ ...state, lastError: error }));
+export function setError(projectId: string, error: string | null) {
+  updateProjectState(projectId, state => ({ ...state, lastError: error }));
 }
 
-export function clearLogs() {
-  loopState.update(state => ({ ...state, logs: [] }));
+export function markStarted(projectId: string, startedAt: Date = new Date()) {
+  updateProjectState(projectId, state => ({
+    ...state,
+    startedAt,
+    endedAt: null,
+    elapsedMs: null,
+    summary: null,
+    summaryUpdatedAt: null,
+    lastError: null
+  }));
+}
+
+export function markEnded(projectId: string, endedAt: Date = new Date()) {
+  updateProjectState(projectId, state => ({
+    ...state,
+    endedAt,
+    elapsedMs: state.startedAt ? endedAt.getTime() - state.startedAt.getTime() : null
+  }));
+}
+
+export function setSummary(
+  projectId: string,
+  summary: string | null,
+  summaryUpdatedAt: Date = new Date()
+) {
+  updateProjectState(projectId, state => ({
+    ...state,
+    summary,
+    summaryUpdatedAt: summary ? summaryUpdatedAt : null
+  }));
+}
+
+export function clearLogs(projectId: string) {
+  updateProjectState(projectId, state => ({ ...state, logs: [] }));
 }

@@ -5,7 +5,7 @@
   import '$lib/i18n';
   import { projects, currentProjectId, currentProject, updateProjects, updateCurrentProject, updateProjectStatus, selectProject } from '$lib/stores/projects';
   import { config, availableClis, updateConfig, setAvailableClis } from '$lib/stores/settings';
-  import { loopState, setStatus, setIteration, addLog, setError } from '$lib/stores/loop';
+  import { loopStates, getLoopState, setStatus, setIteration, addLog, setError, markStarted, markEnded, setSummary } from '$lib/stores/loop';
   import { gitRepoCheckRequest, clearGitRepoCheck, requestGitRepoCheck } from '$lib/stores/gitRepoCheck';
   import { dequeueProject, isInQueue, markRunning } from '$lib/stores/queue';
   import { notifySuccess, notifyError, notifyWarning } from '$lib/stores/notifications';
@@ -18,6 +18,7 @@
   import RecoveryDialog from '$lib/components/RecoveryDialog.svelte';
   import NotificationToast from '$lib/components/NotificationToast.svelte';
   import GitRepoCheckDialog from '$lib/components/GitRepoCheckDialog.svelte';
+  import { get } from 'svelte/store';
 
   let { children } = $props();
   let initialized = $state(false);
@@ -78,11 +79,17 @@
       resumed: 'running',
       completed: 'done',
       maxIterationsReached: 'failed',
+      error: 'failed',
       stopped: 'cancelled'
     };
 
+    const projectId = event.projectId;
+    if (!projectId) {
+      return;
+    }
+
     if (event.type === 'output' && event.content) {
-      addLog({
+      addLog(projectId, {
         iteration: event.iteration || 0,
         content: event.content,
         isStderr: event.isStderr || false,
@@ -90,21 +97,33 @@
       });
     }
 
+    if (event.type === 'iterationStart' && event.iteration === 1) {
+      markStarted(projectId, new Date());
+    }
+
     if (event.type === 'error' && event.error) {
       if (event.error.includes(CODEX_GIT_REPO_CHECK_REQUIRED)) {
         requestGitRepoCheck(event.projectId, 'runtime');
         return;
       }
-      setError(event.error);
+      setError(projectId, event.error);
+      markEnded(projectId, new Date());
       notifyError($_('notifications.executionErrorTitle'), event.error);
-      updateProjectStatus(event.projectId, 'failed');
     }
 
     if (event.type === 'completed') {
+      markEnded(projectId, new Date());
+      const summary = buildSummary(projectId);
+      if (summary) {
+        setSummary(projectId, summary);
+      }
       notifySuccess($_('notifications.taskCompletedTitle'), $_('notifications.taskCompletedMessage'));
     }
 
     if (event.type === 'maxIterationsReached') {
+      const message = $_('notifications.maxIterationsMessage', { values: { iteration: event.iteration } });
+      setError(projectId, message);
+      markEnded(projectId, new Date());
       notifyWarning(
         $_('notifications.maxIterationsTitle'),
         $_('notifications.maxIterationsMessage', { values: { iteration: event.iteration } })
@@ -112,14 +131,44 @@
     }
 
     if (event.iteration !== undefined) {
-      setIteration(event.iteration);
+      setIteration(projectId, event.iteration);
     }
 
     const newStatus = statusMap[event.type];
     if (newStatus) {
-      setStatus(newStatus as any);
+      setStatus(projectId, newStatus as any);
       updateProjectStatus(event.projectId, newStatus as any);
     }
+  }
+
+  function buildSummary(projectId: string): string | null {
+    const state = getLoopState(get(loopStates), projectId);
+    const project = get(currentProject);
+    const completionSignal = project?.id === projectId
+      ? project?.task?.completionSignal
+      : '<done>COMPLETE</done>';
+    const parts: string[] = [];
+    let total = 0;
+    const maxLen = 160;
+
+    for (let i = state.logs.length - 1; i >= 0; i--) {
+      const entry = state.logs[i];
+      if (entry.isStderr) continue;
+      const text = entry.content?.trim();
+      if (!text) continue;
+      if (text.includes(completionSignal)) continue;
+      if (text.startsWith('{') && text.endsWith('}')) continue;
+      if (text.startsWith('[') && text.endsWith(']')) continue;
+      parts.unshift(text);
+      total += text.length;
+      if (total >= maxLen) break;
+    }
+
+    const summary = parts.join(' ').replace(/\s+/g, ' ').trim();
+    if (!summary) {
+      return $_('task.summaryFallback');
+    }
+    return summary.length > maxLen ? `${summary.slice(0, maxLen - 1)}…` : summary;
   }
 
   async function handleConfirmPermissions() {

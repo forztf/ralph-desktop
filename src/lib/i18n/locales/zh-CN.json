@@ -87,7 +87,26 @@
     "resume": "继续",
     "stop": "停止",
     "stopConfirm": "确定要停止吗？这将立即终止当前执行。",
-    "errorPrefix": "错误："
+    "errorPrefix": "错误：",
+    "banner": {
+      "completedTitle": "已完成",
+      "failedTitle": "出错",
+      "meta": "用时 {duration} · 迭代 {current}/{max}"
+    },
+    "actions": {
+      "viewLogs": "查看日志",
+      "openProject": "打开项目",
+      "copySummary": "复制总结",
+      "copyError": "复制错误",
+      "retry": "重新运行"
+    },
+    "statusCard": {
+      "completedTitle": "任务已完成",
+      "failedTitle": "任务出错"
+    },
+    "summaryFallback": "暂无总结",
+    "errorFallback": "未知错误",
+    "durationUnknown": "未知耗时"
   },
   "prompt": {
     "title": "Prompt 预览",
@@ -178,7 +197,7 @@
     "initialQuestion": "你想做什么？",
     "initialDescription": "请简单描述一下你的任务",
     "fallbackQuestion": "请继续描述你的需求",
-    "fallbackDescription": "出现了一些问题，请重试"
+    "fallbackDescription": "出现了一些问题。"
   },
   "dialogs": {
     "selectProjectDir": "选择项目目录",

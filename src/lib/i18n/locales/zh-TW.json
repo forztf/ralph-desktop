@@ -87,7 +87,26 @@
     "resume": "繼續",
     "stop": "停止",
     "stopConfirm": "確定要停止嗎？這會立即終止目前執行。",
-    "errorPrefix": "錯誤："
+    "errorPrefix": "錯誤：",
+    "banner": {
+      "completedTitle": "已完成",
+      "failedTitle": "出錯",
+      "meta": "用時 {duration} · 迭代 {current}/{max}"
+    },
+    "actions": {
+      "viewLogs": "查看日誌",
+      "openProject": "打開專案",
+      "copySummary": "複製總結",
+      "copyError": "複製錯誤",
+      "retry": "重新執行"
+    },
+    "statusCard": {
+      "completedTitle": "任務已完成",
+      "failedTitle": "任務出錯"
+    },
+    "summaryFallback": "暫無總結",
+    "errorFallback": "未知錯誤",
+    "durationUnknown": "未知耗時"
   },
   "prompt": {
     "title": "Prompt 預覽",
@@ -178,7 +197,7 @@
     "initialQuestion": "你想做什麼？",
     "initialDescription": "請簡單描述一下你的任務",
     "fallbackQuestion": "請繼續描述你的需求",
-    "fallbackDescription": "出現了一些問題，請重試"
+    "fallbackDescription": "出現了一些問題。"
   },
   "dialogs": {
     "selectProjectDir": "選擇專案目錄",

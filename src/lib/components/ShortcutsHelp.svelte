@@ -7,6 +7,19 @@
 
   let { show, onClose }: Props = $props();
 
+  function handleBackdropClick(event: MouseEvent) {
+    if (event.target === event.currentTarget) {
+      onClose();
+    }
+  }
+
+  function handleBackdropKeydown(event: KeyboardEvent) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onClose();
+    }
+  }
+
   const shortcuts = $derived([
     { keys: ['⌘', 'N'], description: $_('shortcuts.newProject') },
     { keys: ['⌘', ','], description: $_('shortcuts.openSettings') },
@@ -20,10 +33,15 @@
 </script>
 
 {#if show}
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={onClose}>
+  <div
+    class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+    role="button"
+    tabindex="0"
+    onclick={handleBackdropClick}
+    onkeydown={handleBackdropKeydown}
+  >
     <div
       class="bg-vscode-panel border border-vscode rounded-lg shadow-xl max-w-md w-full m-4"
-      onclick={(e) => e.stopPropagation()}
     >
       <div class="p-4 border-b border-vscode flex items-center justify-between">
         <h2 class="text-lg font-semibold text-vscode">{$_('shortcuts.title')}</h2>

@@ -87,7 +87,26 @@
     "resume": "Continuar",
     "stop": "Detener",
     "stopConfirm": "¿Seguro que deseas detener? Esto finalizará la ejecución inmediatamente.",
-    "errorPrefix": "Error:"
+    "errorPrefix": "Error:",
+    "banner": {
+      "completedTitle": "Completed",
+      "failedTitle": "Error",
+      "meta": "Duration {duration} · Iterations {current}/{max}"
+    },
+    "actions": {
+      "viewLogs": "View logs",
+      "openProject": "Open project",
+      "copySummary": "Copy summary",
+      "copyError": "Copy error",
+      "retry": "Retry"
+    },
+    "statusCard": {
+      "completedTitle": "Task completed",
+      "failedTitle": "Task failed"
+    },
+    "summaryFallback": "Summary unavailable",
+    "errorFallback": "Unknown error",
+    "durationUnknown": "Unknown duration"
   },
   "prompt": {
     "title": "Vista previa del prompt",
@@ -178,7 +197,7 @@
     "initialQuestion": "¿Qué quieres hacer?",
     "initialDescription": "Describe brevemente tu tarea",
     "fallbackQuestion": "Por favor, continúa describiendo tus requisitos",
-    "fallbackDescription": "Algo salió mal, inténtalo de nuevo"
+    "fallbackDescription": "Algo salió mal."
   },
   "dialogs": {
     "selectProjectDir": "Seleccionar directorio del proyecto",

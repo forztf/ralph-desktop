@@ -87,7 +87,26 @@
     "resume": "متابعة",
     "stop": "إيقاف",
     "stopConfirm": "هل أنت متأكد من الإيقاف؟ سيتم إنهاء التنفيذ فورًا.",
-    "errorPrefix": "خطأ:"
+    "errorPrefix": "خطأ:",
+    "banner": {
+      "completedTitle": "Completed",
+      "failedTitle": "Error",
+      "meta": "Duration {duration} · Iterations {current}/{max}"
+    },
+    "actions": {
+      "viewLogs": "View logs",
+      "openProject": "Open project",
+      "copySummary": "Copy summary",
+      "copyError": "Copy error",
+      "retry": "Retry"
+    },
+    "statusCard": {
+      "completedTitle": "Task completed",
+      "failedTitle": "Task failed"
+    },
+    "summaryFallback": "Summary unavailable",
+    "errorFallback": "Unknown error",
+    "durationUnknown": "Unknown duration"
   },
   "prompt": {
     "title": "معاينة Prompt",
@@ -178,7 +197,7 @@
     "initialQuestion": "ماذا تريد أن تفعل؟",
     "initialDescription": "صف مهمتك بإيجاز",
     "fallbackQuestion": "يرجى متابعة وصف متطلباتك",
-    "fallbackDescription": "حدث خطأ ما، حاول مرة أخرى"
+    "fallbackDescription": "حدث خطأ ما."
   },
   "dialogs": {
     "selectProjectDir": "اختر مجلد المشروع",

@@ -1,9 +1,16 @@
-use super::{CliAdapter, CommandOptions, LineType, ParsedLine};
+use super::{
+    apply_extended_path, apply_shell_env, command_for_cli, resolve_cli_path, shell_env_has,
+    shell_env_value,
+    CliAdapter,
+    CommandOptions, LineType, ParsedLine,
+};
 use crate::storage::models::CliType;
 use async_trait::async_trait;
-use serde_json::Value;
-use std::path::Path;
+use serde_json::{json, Value};
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::process::Stdio;
+use std::{env, ffi::OsStr};
 use tokio::process::Command;
 
 pub struct OpenCodeAdapter {
@@ -12,9 +19,7 @@ pub struct OpenCodeAdapter {
 
 impl OpenCodeAdapter {
     pub fn new() -> Self {
-        let path = which::which("opencode")
-            .ok()
-            .map(|p| p.to_string_lossy().to_string());
+        let path = resolve_cli_path("opencode");
         Self { path }
     }
 
@@ -45,15 +50,17 @@ impl OpenCodeAdapter {
         readonly: bool,
         _options: CommandOptions,
     ) -> Command {
-        let mut cmd = Command::new("opencode");
+        let exe = self.path.as_deref().unwrap_or("opencode");
         let args = if readonly {
             Self::readonly_args(prompt)
         } else {
             Self::exec_args(prompt)
         };
-        cmd.current_dir(working_dir)
-            .args(args)
-            .stdin(Stdio::null())
+        let mut cmd = command_for_cli(exe, &args, working_dir);
+        apply_extended_path(&mut cmd);
+        apply_shell_env(&mut cmd);
+        Self::apply_full_access(&mut cmd);
+        cmd.stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
         cmd
@@ -77,6 +84,141 @@ impl OpenCodeAdapter {
         }
         None
     }
+
+    fn apply_full_access(cmd: &mut Command) {
+        if let Some(config) = load_opencode_config_content() {
+            let merged = merge_permissions(config);
+            cmd.env("OPENCODE_CONFIG_CONTENT", merged.to_string());
+            return;
+        }
+
+        if has_env_key("OPENCODE_CONFIG_CONTENT") || shell_env_has("OPENCODE_CONFIG_CONTENT") {
+            return;
+        }
+
+        if let Some(config) = load_opencode_config_file() {
+            let merged = merge_permissions(config);
+            cmd.env("OPENCODE_CONFIG_CONTENT", merged.to_string());
+            return;
+        }
+
+        cmd.env(
+            "OPENCODE_CONFIG_CONTENT",
+            full_access_template().to_string(),
+        );
+    }
+}
+
+fn has_env_key(key: &str) -> bool {
+    env::var_os(key).is_some()
+        || env::vars_os().any(|(k, _)| k == OsStr::new(key))
+}
+
+fn env_or_shell(key: &str) -> Option<String> {
+    env::var(key).ok().or_else(|| shell_env_value(key))
+}
+
+fn load_opencode_config_content() -> Option<Value> {
+    let content = env_or_shell("OPENCODE_CONFIG_CONTENT")?;
+    serde_json::from_str(&content).ok()
+}
+
+fn config_candidate_paths() -> Vec<PathBuf> {
+    let mut paths = Vec::new();
+
+    if let Some(path) = env_or_shell("OPENCODE_CONFIG") {
+        paths.push(PathBuf::from(path));
+    }
+
+    if let Some(dir) = env_or_shell("OPENCODE_CONFIG_DIR") {
+        paths.push(PathBuf::from(dir).join("config.json"));
+    }
+
+    if let Some(xdg) = env_or_shell("XDG_CONFIG_HOME") {
+        paths.push(PathBuf::from(xdg).join("opencode").join("config.json"));
+    }
+
+    if let Some(home) = env_or_shell("HOME").or_else(|| env_or_shell("USERPROFILE")) {
+        let home_path = PathBuf::from(home);
+        paths.push(home_path.join(".config/opencode/config.json"));
+        paths.push(home_path.join(".opencode/config.json"));
+    }
+
+    #[cfg(target_os = "windows")]
+    if let Some(appdata) = env_or_shell("APPDATA") {
+        paths.push(PathBuf::from(appdata).join("opencode").join("config.json"));
+    }
+
+    paths
+}
+
+fn load_opencode_config_file() -> Option<Value> {
+    for path in config_candidate_paths() {
+        if let Ok(contents) = fs::read_to_string(&path) {
+            if let Ok(value) = serde_json::from_str::<Value>(&contents) {
+                return Some(value);
+            }
+        }
+    }
+    None
+}
+
+fn merge_permissions(config: Value) -> Value {
+    let mut config = match config {
+        Value::Object(_) => config,
+        _ => json!({}),
+    };
+
+    let permission = full_access_permissions();
+    apply_permissions(&mut config, "agent", &["general", "build", "plan", "explore"], &permission);
+    apply_permissions(&mut config, "mode", &["build", "plan"], &permission);
+    config
+}
+
+fn apply_permissions(config: &mut Value, section: &str, keys: &[&str], permission: &Value) {
+    if !config.get(section).map(|v| v.is_object()).unwrap_or(false) {
+        config[section] = json!({});
+    }
+
+    let Some(section_map) = config.get_mut(section).and_then(|v| v.as_object_mut()) else {
+        return;
+    };
+
+    for key in keys {
+        let entry = section_map
+            .entry((*key).to_string())
+            .or_insert_with(|| json!({}));
+        if let Some(map) = entry.as_object_mut() {
+            map.insert("permission".to_string(), permission.clone());
+        } else {
+            *entry = json!({ "permission": permission.clone() });
+        }
+    }
+}
+
+fn full_access_permissions() -> Value {
+    json!({
+        "edit": "allow",
+        "bash": "allow",
+        "webfetch": "allow",
+        "doom_loop": "allow",
+        "external_directory": "allow"
+    })
+}
+
+fn full_access_template() -> Value {
+    json!({
+        "agent": {
+            "general": { "permission": full_access_permissions() },
+            "build": { "permission": full_access_permissions() },
+            "plan": { "permission": full_access_permissions() },
+            "explore": { "permission": full_access_permissions() }
+        },
+        "mode": {
+            "build": { "permission": full_access_permissions() },
+            "plan": { "permission": full_access_permissions() }
+        }
+    })
 }
 
 #[async_trait]
@@ -98,11 +240,11 @@ impl CliAdapter for OpenCodeAdapter {
     }
 
     async fn version(&self) -> Option<String> {
-        let output = Command::new("opencode")
-            .arg("--version")
-            .output()
-            .await
-            .ok()?;
+        let exe = self.path.as_deref().unwrap_or("opencode");
+        let mut cmd = Command::new(exe);
+        apply_extended_path(&mut cmd);
+        apply_shell_env(&mut cmd);
+        let output = cmd.arg("--version").output().await.ok()?;
 
         if output.status.success() {
             Some(String::from_utf8_lossy(&output.stdout).trim().to_string())

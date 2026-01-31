@@ -1,5 +1,6 @@
 use super::*;
 use crate::engine::ai_brainstorm::{run_ai_brainstorm, AiBrainstormResponse, ConversationMessage};
+use crate::security;
 use std::path::PathBuf;
 
 /// List all projects with synced status
@@ -170,7 +171,9 @@ pub async fn ai_brainstorm_chat(
     let state = storage::load_project_state(&uuid).map_err(|e| e.to_string())?;
 
     let working_dir = PathBuf::from(&state.path);
-    run_ai_brainstorm(&working_dir, &conversation).await
+    run_ai_brainstorm(&working_dir, &conversation)
+        .await
+        .map_err(|e| security::sanitize_log(&e))
 }
 
 /// Complete AI brainstorming with the generated prompt

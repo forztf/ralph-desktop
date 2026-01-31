@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ProjectState, LogEntry } from '$lib/types';
+  import type { ProjectState } from '$lib/types';
   import type { LoopStoreState } from '$lib/stores/loop';
   import * as api from '$lib/services/tauri';
   import { startLoopWithGuard } from '$lib/services/loopStart';
@@ -38,7 +38,26 @@
   const isRunning = $derived(project.status === 'running');
   const isPaused = $derived(project.status === 'paused');
   const isPausing = $derived(project.status === 'pausing');
+  const isDone = $derived(project.status === 'done');
+  const isFailed = $derived(project.status === 'failed');
+  const showStatusBanner = $derived(isDone || isFailed);
+  const showStatusCard = $derived(isDone || isFailed);
   const canStart = $derived(['ready', 'failed', 'cancelled'].includes(project.status));
+  const summaryText = $derived(loopState.summary || $_('task.summaryFallback'));
+  const elapsedText = $derived(formatDuration(loopState.elapsedMs));
+  const maxIterations = $derived(project.task?.maxIterations || loopState.maxIterations || 0);
+
+  const badgeConfig = $derived({
+    done: 'bg-vscode-success text-white border-vscode-success shadow-md shadow-black/20 animate-pulse',
+    failed: 'bg-vscode-error text-white border-vscode-error shadow-md shadow-black/20 animate-pulse',
+    running: 'bg-vscode-panel text-vscode-success border-vscode-success',
+    pausing: 'bg-vscode-panel text-vscode-warning border-vscode-warning',
+    paused: 'bg-vscode-panel text-vscode-warning border-vscode-warning',
+    queued: 'bg-vscode-panel text-vscode-info border-vscode',
+    ready: 'bg-vscode-panel text-vscode-muted border-vscode',
+    cancelled: 'bg-vscode-panel text-vscode-muted border-vscode',
+    brainstorming: 'bg-vscode-panel text-vscode-accent border-vscode'
+  });
 
   async function handleStart() {
     starting = true;
@@ -76,9 +95,103 @@
       }
     }
   }
+
+  function formatDuration(ms: number | null): string {
+    if (ms === null || Number.isNaN(ms)) return $_('task.durationUnknown');
+    const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    if (hours > 0) {
+      return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+    return `${minutes}:${String(seconds).padStart(2, '0')}`;
+  }
+
+  function scrollToLogs() {
+    const el = document.querySelector('[data-testid="log-viewer"]');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  async function handleOpenProject() {
+    const opener = await import('@tauri-apps/plugin-opener');
+    await opener.openPath(project.path);
+  }
+
+  async function handleCopySummary() {
+    await navigator.clipboard.writeText(summaryText);
+  }
+
+  async function handleCopyError() {
+    const message = loopState.lastError || $_('task.errorFallback');
+    await navigator.clipboard.writeText(message);
+  }
 </script>
 
 <div class="flex-1 flex flex-col overflow-hidden">
+  {#if showStatusBanner}
+    <div
+      class="px-4 py-3 border-b border-vscode {isDone ? 'bg-vscode-success' : 'bg-vscode-error'} text-white"
+      data-testid="task-status-banner"
+    >
+      <div class="flex items-start justify-between gap-4">
+        <div class="flex items-start gap-3 min-w-0">
+          <div class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-xl flex-shrink-0">
+            {#if isDone}✓{:else}✕{/if}
+          </div>
+          <div class="min-w-0">
+            <div class="text-sm font-semibold">
+              {isDone ? $_('task.banner.completedTitle') : $_('task.banner.failedTitle')}
+            </div>
+            <div class="text-xs opacity-90">
+              {$_('task.banner.meta', { values: { duration: elapsedText, current: loopState.currentIteration, max: maxIterations } })}
+            </div>
+            {#if isDone}
+              <div class="text-xs opacity-90 mt-1 truncate">{summaryText}</div>
+            {/if}
+          </div>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <button
+            class="px-3 py-1.5 text-xs rounded bg-white/15 hover:bg-white/25 transition"
+            onclick={scrollToLogs}
+          >
+            {$_('task.actions.viewLogs')}
+          </button>
+          {#if isDone}
+            <button
+              class="px-3 py-1.5 text-xs rounded bg-white/15 hover:bg-white/25 transition"
+              onclick={handleOpenProject}
+            >
+              {$_('task.actions.openProject')}
+            </button>
+            <button
+              class="px-3 py-1.5 text-xs rounded bg-white/15 hover:bg-white/25 transition"
+              onclick={handleCopySummary}
+            >
+              {$_('task.actions.copySummary')}
+            </button>
+          {:else}
+            <button
+              class="px-3 py-1.5 text-xs rounded bg-white/15 hover:bg-white/25 transition"
+              onclick={handleCopyError}
+            >
+              {$_('task.actions.copyError')}
+            </button>
+            <button
+              class="px-3 py-1.5 text-xs rounded bg-white/15 hover:bg-white/25 transition"
+              onclick={handleStart}
+            >
+              {$_('task.actions.retry')}
+            </button>
+          {/if}
+        </div>
+      </div>
+    </div>
+  {/if}
+
   <!-- Header -->
   <div class="p-4 bg-vscode-panel border-b border-vscode">
     <div class="flex items-start justify-between">
@@ -90,8 +203,14 @@
         <p class="text-sm text-vscode-dim mt-1">{project.path}</p>
       </div>
       <div class="flex items-center gap-2">
-        <span class={status.color}>{status.icon}</span>
-        <span class="text-sm font-medium text-vscode-dim" data-testid="task-status" data-status={project.status}>{status.label}</span>
+        <div
+          class="px-3 py-1.5 rounded-full border text-sm font-semibold flex items-center gap-2 {badgeConfig[project.status] || badgeConfig.ready}"
+          data-testid="task-status"
+          data-status={project.status}
+        >
+          <span class="text-base">{status.icon}</span>
+          <span>{status.label}</span>
+        </div>
       </div>
     </div>
 
@@ -135,7 +254,32 @@
 
   <!-- Log Viewer -->
   <div class="flex-1 overflow-hidden bg-vscode-editor">
-    <LogViewer logs={loopState.logs} />
+    <LogViewer logs={loopState.logs} showHeader={showStatusCard}>
+      <svelte:fragment slot="header">
+        {#if showStatusCard}
+          <div class="bg-vscode-panel border border-vscode rounded-lg p-4 shadow-md">
+            <div class="flex items-center justify-between gap-3">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">{isDone ? '✅' : '❌'}</span>
+                <div class="text-sm font-semibold text-vscode">
+                  {isDone ? $_('task.statusCard.completedTitle') : $_('task.statusCard.failedTitle')}
+                </div>
+              </div>
+              <div class="text-xs text-vscode-muted">
+                {$_('task.banner.meta', { values: { duration: elapsedText, current: loopState.currentIteration, max: maxIterations } })}
+              </div>
+            </div>
+            {#if isDone}
+              <div class="text-sm text-vscode mt-3">{summaryText}</div>
+            {:else}
+              <div class="text-sm text-vscode-error mt-3">
+                {loopState.lastError || $_('task.errorFallback')}
+              </div>
+            {/if}
+          </div>
+        {/if}
+      </svelte:fragment>
+    </LogViewer>
   </div>
 
   <!-- Control Bar -->

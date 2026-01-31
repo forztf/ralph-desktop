@@ -4,9 +4,10 @@
 
   interface Props {
     logs: LogEntry[];
+    showHeader?: boolean;
   }
 
-  let { logs }: Props = $props();
+  let { logs, showHeader = false }: Props = $props();
   let container: HTMLDivElement;
   let autoScroll = $state(true);
 
@@ -36,6 +37,12 @@
   data-testid="log-viewer"
   onscroll={handleScroll}
 >
+  {#if showHeader}
+    <div class="sticky top-0 z-10 pb-3">
+      <slot name="header"></slot>
+    </div>
+  {/if}
+
   {#if logs.length === 0}
     <div class="text-vscode-muted text-center py-8">
       {$_('log.waiting')}

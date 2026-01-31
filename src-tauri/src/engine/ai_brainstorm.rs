@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::process::Stdio;
-use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
 /// AI brainstorm response with structured options
@@ -72,6 +71,7 @@ When enough information is gathered, help the user focus:
 - Confirm core features
 - Confirm technical choices
 - Confirm success criteria
+- Confirm testing & validation plan (must ask at least one question)
 
 ### Phase 4: Generate Prompt
 Synthesize all information into a complete task description.
@@ -143,7 +143,7 @@ Output strictly in JSON format, nothing else.
 ### Questions to avoid (mechanical, closed):
 - "What type of task is this?" ❌
 - "What tech stack?" ❌ (unless user mentions technical choices)
-- "Do you need tests?" ❌ (too early for details)
+- "Do you need tests?" ❌ (too early for details; ask later with context)
 
 ### When to use multi-select:
 - Feature lists: "Which features would you like to include?"
@@ -178,8 +178,17 @@ The final prompt should include:
 2. **Background & Goals**: Why do this, what effect to achieve
 3. **Core Features**: List of must-have features
 4. **Technical Requirements**: Tech stack, constraints
-5. **Success Criteria**: How to judge completion
-6. **Completion Signal**: `<done>COMPLETE</done>`
+5. **Testing & Validation**:
+   - **Test Plan**: Must include at least unit tests; prefer E2E if applicable
+   - **Test Commands**: Exact commands to run
+   - **Manual Checks**: Only if automation is not feasible, with reasons
+6. **Success Criteria**: Must include tests passing (or explicit exceptions)
+7. **Completion Signal**: `<done>COMPLETE</done>`
+
+## Mandatory Testing Rule
+Before completing, you MUST ask about testing/validation. If the user is unsure, propose a default plan:
+- At minimum: unit tests covering key logic
+- If there is UI or end-to-end flow: add a minimal E2E smoke test
 
 Remember: Match the user's language in all your responses!"#;
 
@@ -349,32 +358,43 @@ fn contains_cjk(input: &str) -> bool {
 
 /// Call Claude Code CLI and get response
 async fn call_claude_cli(working_dir: &Path, prompt: &str) -> Result<String, String> {
-    let mut cmd = Command::new("claude");
-    cmd.arg("--print")
-        .arg("--dangerously-skip-permissions")
-        .arg("-p")
-        .arg(prompt)
-        .current_dir(working_dir)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
+    let exe = crate::adapters::resolve_cli_path("claude").unwrap_or_else(|| "claude".to_string());
+    let args = vec![
+        "--print".to_string(),
+        "--dangerously-skip-permissions".to_string(),
+        "--permission-mode".to_string(),
+        "bypassPermissions".to_string(),
+        prompt.to_string(),
+        "--output-format".to_string(),
+        "text".to_string(),
+    ];
+    let mut cmd = crate::adapters::command_for_cli(&exe, &args, working_dir);
+    crate::adapters::apply_extended_path(&mut cmd);
+    crate::adapters::apply_shell_env(&mut cmd);
+    cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
 
-    let mut child = cmd.spawn().map_err(|e| format!("Failed to spawn claude: {}", e))?;
+    let output = cmd
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run claude: {}", e))?;
 
-    let stdout = child.stdout.take().ok_or("Failed to get stdout")?;
-    let mut reader = BufReader::new(stdout).lines();
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
 
-    let mut output = String::new();
-
-    while let Some(line) = reader.next_line().await.map_err(|e| e.to_string())? {
-        output.push_str(&line);
-        output.push('\n');
+    if !output.status.success() {
+        let message = if !stderr.trim().is_empty() {
+            stderr.trim().to_string()
+        } else if !stdout.trim().is_empty() {
+            stdout.trim().to_string()
+        } else {
+            format!("Claude CLI exited with status: {}", output.status)
+        };
+        return Err(message);
     }
 
-    let status = child.wait().await.map_err(|e| e.to_string())?;
-
-    if !status.success() {
-        return Err(format!("Claude CLI exited with status: {}", status));
+    if stdout.trim().is_empty() && !stderr.trim().is_empty() {
+        return Err(stderr.trim().to_string());
     }
 
-    Ok(output)
+    Ok(stdout)
 }

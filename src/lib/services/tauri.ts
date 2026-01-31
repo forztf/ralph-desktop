@@ -258,6 +258,8 @@ const e2eState = (() => {
         `Task: Build a unique ${topic} game`,
         `Tech: HTML5 Canvas / JavaScript`,
         `Requirements: smooth controls, clear UI, interesting twist`,
+        `Testing & Validation: include unit tests for core logic; add a minimal E2E smoke test if UI flow exists`,
+        `Test Commands: npm test (unit), npm run e2e (if available)`,
         `Success: playable in browser`,
         `<done>COMPLETE</done>`
       ].join('\n');

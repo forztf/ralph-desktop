@@ -104,8 +104,9 @@
         <h3 class="text-sm font-medium text-vscode mb-3">{$_('settings.cliSection')}</h3>
         <div class="space-y-3">
           <div>
-            <label class="block text-sm text-vscode-muted mb-1">{$_('settings.defaultCli')}</label>
+            <label for="settings-default-cli" class="block text-sm text-vscode-muted mb-1">{$_('settings.defaultCli')}</label>
             <select
+              id="settings-default-cli"
               class={fieldClass}
               bind:value={localConfig.defaultCli}
             >
@@ -122,8 +123,9 @@
         <h3 class="text-sm font-medium text-vscode mb-3">{$_('settings.loopSection')}</h3>
         <div class="space-y-3">
           <div>
-            <label class="block text-sm text-vscode-muted mb-1">{$_('settings.defaultMaxIterations')}</label>
+            <label for="settings-default-max-iterations" class="block text-sm text-vscode-muted mb-1">{$_('settings.defaultMaxIterations')}</label>
             <input
+              id="settings-default-max-iterations"
               type="number"
               class={fieldClass}
               bind:value={localConfig.defaultMaxIterations}
@@ -132,8 +134,9 @@
             />
           </div>
           <div>
-            <label class="block text-sm text-vscode-muted mb-1">{$_('settings.maxConcurrent')}</label>
+            <label for="settings-max-concurrent" class="block text-sm text-vscode-muted mb-1">{$_('settings.maxConcurrent')}</label>
             <input
+              id="settings-max-concurrent"
               type="number"
               class={fieldClass}
               bind:value={localConfig.maxConcurrentProjects}
@@ -142,8 +145,9 @@
             />
           </div>
           <div>
-            <label class="block text-sm text-vscode-muted mb-1">{$_('settings.iterationTimeout')}</label>
+            <label for="settings-iteration-timeout" class="block text-sm text-vscode-muted mb-1">{$_('settings.iterationTimeout')}</label>
             <input
+              id="settings-iteration-timeout"
               type="number"
               class={fieldClass}
               value={localConfig.iterationTimeoutMs / 60000}
@@ -155,8 +159,9 @@
             />
           </div>
           <div>
-            <label class="block text-sm text-vscode-muted mb-1">{$_('settings.idleTimeout')}</label>
+            <label for="settings-idle-timeout" class="block text-sm text-vscode-muted mb-1">{$_('settings.idleTimeout')}</label>
             <input
+              id="settings-idle-timeout"
               type="number"
               class={fieldClass}
               value={localConfig.idleTimeoutMs / 60000}
@@ -175,8 +180,9 @@
         <h3 class="text-sm font-medium text-vscode mb-3">{$_('settings.appearance')}</h3>
         <div class="space-y-3">
           <div>
-            <label class="block text-sm text-vscode-muted mb-1">{$_('settings.theme')}</label>
+            <label for="settings-theme" class="block text-sm text-vscode-muted mb-1">{$_('settings.theme')}</label>
             <select
+              id="settings-theme"
               class={fieldClass}
               bind:value={localConfig.theme}
             >
@@ -186,8 +192,9 @@
             </select>
           </div>
           <div>
-            <label class="block text-sm text-vscode-muted mb-1">{$_('settings.language')}</label>
+            <label for="settings-language" class="block text-sm text-vscode-muted mb-1">{$_('settings.language')}</label>
             <select
+              id="settings-language"
               class={fieldClass}
               bind:value={localConfig.language}
             >
@@ -209,8 +216,9 @@
         <h3 class="text-sm font-medium text-vscode mb-3">{$_('settings.storage')}</h3>
         <div class="space-y-3">
           <div>
-            <label class="block text-sm text-vscode-muted mb-1">{$_('settings.logRetention')}</label>
+            <label for="settings-log-retention" class="block text-sm text-vscode-muted mb-1">{$_('settings.logRetention')}</label>
             <input
+              id="settings-log-retention"
               type="number"
               class={fieldClass}
               bind:value={localConfig.logRetentionDays}

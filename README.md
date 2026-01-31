@@ -79,6 +79,7 @@ Instead of running an AI agent once and hoping for the best, Ralph Loop:
 - **AI Brainstorm** — Conversational requirement gathering with automatic prompt generation
 - **Ralph Loop Engine** — Persistent iteration with completion detection
 - **Multi-CLI Support** — Works with Claude Code, Codex, and OpenCode
+- **Zero Config** — If any supported CLI already works in your terminal (official login or custom API), Ralph Desktop automatically reuses it
 - **Visual Dashboard** — Real-time logs with ANSI color support
 - **Execution Control** — Pause / Resume / Stop at any time
 - **Project Management** — Create, switch, and manage multiple projects
@@ -97,9 +98,9 @@ Ralph Desktop works with any AI coding CLI that supports headless execution:
 |-----|--------|--------------|
 | [Claude Code](https://github.com/anthropics/claude-code) | ✅ Supported | `npm install -g @anthropic-ai/claude-code` |
 | [Codex](https://github.com/openai/codex) | ✅ Supported | `npm install -g @openai/codex` |
-| [OpenCode](https://github.com/opencode-ai/opencode) | 🚧 Coming Soon | — |
+| [OpenCode](https://github.com/opencode-ai/opencode) | ✅ Supported | `npm install -g opencode-ai` |
 
-**Prerequisites:** You must have at least one of the above CLIs installed before using Ralph Desktop.
+**Prerequisites:** You must have at least one of the above CLIs installed before using Ralph Desktop. If it already works in your terminal, Ralph Desktop will reuse its existing config automatically.
 
 ---
 

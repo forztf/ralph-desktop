@@ -77,6 +77,7 @@ Ralph Desktop 一次性解决这三个问题：
 - **AI Brainstorm** — 对话式需求收集，自动生成 prompt
 - **Ralph Loop 引擎** — 持续迭代，完成信号检测
 - **多 CLI 支持** — 兼容 Claude Code、Codex、OpenCode
+- **免配置** — 只要 CLI 在终端可用（官方订阅或第三方 API），自动复用现有配置
 - **可视化面板** — 实时日志，支持 ANSI 颜色
 - **执行控制** — 随时暂停 / 恢复 / 停止
 - **项目管理** — 创建、切换、管理多个项目
@@ -95,9 +96,9 @@ Ralph Desktop 可与任何支持无头执行的 AI 编程 CLI 配合使用：
 |-----|------|----------|
 | [Claude Code](https://github.com/anthropics/claude-code) | ✅ 已支持 | `npm install -g @anthropic-ai/claude-code` |
 | [Codex](https://github.com/openai/codex) | ✅ 已支持 | `npm install -g @openai/codex` |
-| [OpenCode](https://github.com/opencode-ai/opencode) | 🚧 即将支持 | — |
+| [OpenCode](https://github.com/opencode-ai/opencode) | ✅ 已支持 | `npm install -g opencode-ai` |
 
-**前置要求：** 使用 Ralph Desktop 前，你必须至少安装上述 CLI 中的一个。
+**前置要求：** 使用 Ralph Desktop 前，你必须至少安装上述 CLI 中的一个。如果 CLI 在终端可用，Ralph Desktop 会自动复用其现有配置。
 
 ---
 

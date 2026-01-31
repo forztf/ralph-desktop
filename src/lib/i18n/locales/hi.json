@@ -87,7 +87,26 @@
     "resume": "जारी रखें",
     "stop": "बंद करें",
     "stopConfirm": "क्या आप वाकई रोकना चाहते हैं? यह तुरंत समाप्त कर देगा।",
-    "errorPrefix": "त्रुटि:"
+    "errorPrefix": "त्रुटि:",
+    "banner": {
+      "completedTitle": "Completed",
+      "failedTitle": "Error",
+      "meta": "Duration {duration} · Iterations {current}/{max}"
+    },
+    "actions": {
+      "viewLogs": "View logs",
+      "openProject": "Open project",
+      "copySummary": "Copy summary",
+      "copyError": "Copy error",
+      "retry": "Retry"
+    },
+    "statusCard": {
+      "completedTitle": "Task completed",
+      "failedTitle": "Task failed"
+    },
+    "summaryFallback": "Summary unavailable",
+    "errorFallback": "Unknown error",
+    "durationUnknown": "Unknown duration"
   },
   "prompt": {
     "title": "प्रॉम्प्ट पूर्वावलोकन",
@@ -178,7 +197,7 @@
     "initialQuestion": "आप क्या करना चाहते हैं?",
     "initialDescription": "अपने कार्य का संक्षिप्त विवरण दें",
     "fallbackQuestion": "कृपया अपनी आवश्यकताओं को और बताएं",
-    "fallbackDescription": "कुछ गलत हुआ, फिर से कोशिश करें"
+    "fallbackDescription": "कुछ गलत हुआ।"
   },
   "dialogs": {
     "selectProjectDir": "प्रोजेक्ट निर्देशिका चुनें",

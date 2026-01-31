@@ -87,7 +87,26 @@
     "resume": "চালিয়ে যান",
     "stop": "বন্ধ",
     "stopConfirm": "আপনি কি নিশ্চিত? এটি সঙ্গে সঙ্গে থামাবে।",
-    "errorPrefix": "ত্রুটি:"
+    "errorPrefix": "ত্রুটি:",
+    "banner": {
+      "completedTitle": "Completed",
+      "failedTitle": "Error",
+      "meta": "Duration {duration} · Iterations {current}/{max}"
+    },
+    "actions": {
+      "viewLogs": "View logs",
+      "openProject": "Open project",
+      "copySummary": "Copy summary",
+      "copyError": "Copy error",
+      "retry": "Retry"
+    },
+    "statusCard": {
+      "completedTitle": "Task completed",
+      "failedTitle": "Task failed"
+    },
+    "summaryFallback": "Summary unavailable",
+    "errorFallback": "Unknown error",
+    "durationUnknown": "Unknown duration"
   },
   "prompt": {
     "title": "প্রম্পট প্রিভিউ",
@@ -178,7 +197,7 @@
     "initialQuestion": "আপনি কী করতে চান?",
     "initialDescription": "আপনার কাজ সংক্ষেপে লিখুন",
     "fallbackQuestion": "দয়া করে আপনার চাহিদা আরও ব্যাখ্যা করুন",
-    "fallbackDescription": "সমস্যা হয়েছে, আবার চেষ্টা করুন"
+    "fallbackDescription": "সমস্যা হয়েছে।"
   },
   "dialogs": {
     "selectProjectDir": "প্রকল্পের ডিরেক্টরি নির্বাচন করুন",

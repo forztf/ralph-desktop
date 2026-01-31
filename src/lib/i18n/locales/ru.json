@@ -87,7 +87,26 @@
     "resume": "Продолжить",
     "stop": "Остановить",
     "stopConfirm": "Вы уверены, что хотите остановить? Выполнение завершится немедленно.",
-    "errorPrefix": "Ошибка:"
+    "errorPrefix": "Ошибка:",
+    "banner": {
+      "completedTitle": "Completed",
+      "failedTitle": "Error",
+      "meta": "Duration {duration} · Iterations {current}/{max}"
+    },
+    "actions": {
+      "viewLogs": "View logs",
+      "openProject": "Open project",
+      "copySummary": "Copy summary",
+      "copyError": "Copy error",
+      "retry": "Retry"
+    },
+    "statusCard": {
+      "completedTitle": "Task completed",
+      "failedTitle": "Task failed"
+    },
+    "summaryFallback": "Summary unavailable",
+    "errorFallback": "Unknown error",
+    "durationUnknown": "Unknown duration"
   },
   "prompt": {
     "title": "Предпросмотр Prompt",
@@ -178,7 +197,7 @@
     "initialQuestion": "Что вы хотите сделать?",
     "initialDescription": "Кратко опишите задачу",
     "fallbackQuestion": "Пожалуйста, продолжите описание требований",
-    "fallbackDescription": "Что-то пошло не так, попробуйте еще раз"
+    "fallbackDescription": "Что-то пошло не так."
   },
   "dialogs": {
     "selectProjectDir": "Выберите каталог проекта",

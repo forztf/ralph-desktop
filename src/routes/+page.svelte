@@ -1,7 +1,7 @@
 <script lang="ts">
   import { projects, currentProjectId, currentProject, selectProject, addProject, removeProject, updateCurrentProject } from '$lib/stores/projects';
   import { _ } from 'svelte-i18n';
-  import { loopState, resetLoop, clearLogs } from '$lib/stores/loop';
+  import { loopStates, getLoopState, resetLoop } from '$lib/stores/loop';
   import { config, availableClis } from '$lib/stores/settings';
   import * as api from '$lib/services/tauri';
   import type { ProjectState, CliType } from '$lib/types';
@@ -114,8 +114,7 @@
   function handleBrainstormComplete(project: ProjectState) {
     updateCurrentProject(project);
     showBrainstorm = false;
-    resetLoop();
-    clearLogs();
+    resetLoop(project.id);
   }
 
   const availableCliCount = $derived($availableClis.filter(c => c.available).length);
@@ -201,7 +200,7 @@
       {:else}
         <TaskDetail
           project={$currentProject}
-          loopState={$loopState}
+          loopState={getLoopState($loopStates, $currentProject?.id)}
         />
       {/if}
     {:else}

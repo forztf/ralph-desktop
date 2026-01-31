@@ -87,7 +87,26 @@
     "resume": "再開",
     "stop": "停止",
     "stopConfirm": "停止しますか？即時終了します。",
-    "errorPrefix": "エラー："
+    "errorPrefix": "エラー：",
+    "banner": {
+      "completedTitle": "Completed",
+      "failedTitle": "Error",
+      "meta": "Duration {duration} · Iterations {current}/{max}"
+    },
+    "actions": {
+      "viewLogs": "View logs",
+      "openProject": "Open project",
+      "copySummary": "Copy summary",
+      "copyError": "Copy error",
+      "retry": "Retry"
+    },
+    "statusCard": {
+      "completedTitle": "Task completed",
+      "failedTitle": "Task failed"
+    },
+    "summaryFallback": "Summary unavailable",
+    "errorFallback": "Unknown error",
+    "durationUnknown": "Unknown duration"
   },
   "prompt": {
     "title": "Prompt プレビュー",
@@ -178,7 +197,7 @@
     "initialQuestion": "何をしたいですか？",
     "initialDescription": "タスクを簡単に説明してください",
     "fallbackQuestion": "要件をもう少し教えてください",
-    "fallbackDescription": "問題が発生しました。もう一度お試しください"
+    "fallbackDescription": "問題が発生しました。"
   },
   "dialogs": {
     "selectProjectDir": "プロジェクトのディレクトリを選択",
