@@ -7,6 +7,8 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
 use tokio::io::{AsyncBufReadExt, BufReader};
+#[cfg(target_os = "windows")]
+use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 use tokio::sync::Notify;
 
@@ -173,6 +175,29 @@ Diff:
             skip_git_repo_check: self.skip_git_repo_check,
         };
         let mut cmd = adapter.build_readonly_command(&prompt, &self.project_path, options);
+        #[cfg(target_os = "windows")]
+        let output = {
+            if self.cli_type == CliType::Claude {
+                let mut child = cmd.spawn().map_err(|e| format!("Failed to run CLI: {e}"))?;
+                if let Some(mut stdin) = child.stdin.take() {
+                    stdin
+                        .write_all(prompt.as_bytes())
+                        .await
+                        .map_err(|e| format!("Failed to write Claude prompt: {e}"))?;
+                    stdin
+                        .write_all(b"\n")
+                        .await
+                        .map_err(|e| format!("Failed to write Claude prompt: {e}"))?;
+                }
+                child
+                    .wait_with_output()
+                    .await
+                    .map_err(|e| format!("Failed to run CLI: {e}"))?
+            } else {
+                cmd.output().await.map_err(|e| format!("Failed to run CLI: {e}"))?
+            }
+        };
+        #[cfg(not(target_os = "windows"))]
         let output = cmd.output().await.map_err(|e| format!("Failed to run CLI: {e}"))?;
 
         if !output.status.success() {
@@ -317,6 +342,29 @@ Diff:
                     continue;
                 }
             };
+            #[cfg(target_os = "windows")]
+            if self.cli_type == CliType::Claude {
+                if let Some(mut stdin) = child.stdin.take() {
+                    if let Err(e) = stdin.write_all(self.prompt.as_bytes()).await {
+                        let _ = child.kill().await;
+                        self.emit_event(LoopEvent::Error {
+                            project_id: self.project_id.clone(),
+                            iteration,
+                            error: format!("Failed to write Claude prompt: {}", e),
+                        });
+                        continue;
+                    }
+                    if let Err(e) = stdin.write_all(b"\n").await {
+                        let _ = child.kill().await;
+                        self.emit_event(LoopEvent::Error {
+                            project_id: self.project_id.clone(),
+                            iteration,
+                            error: format!("Failed to write Claude prompt: {}", e),
+                        });
+                        continue;
+                    }
+                }
+            }
 
             // Read stdout and stderr in parallel
             let stdout = child.stdout.take();

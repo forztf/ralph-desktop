@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::process::Stdio;
+#[cfg(target_os = "windows")]
+use tokio::io::AsyncWriteExt;
 
 /// AI brainstorm response with structured options
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -358,20 +360,57 @@ fn contains_cjk(input: &str) -> bool {
 /// Call Claude Code CLI and get response
 async fn call_claude_cli(working_dir: &Path, prompt: &str) -> Result<String, String> {
     let exe = crate::adapters::resolve_cli_path("claude").unwrap_or_else(|| "claude".to_string());
-    let args = vec![
+    let mut args = vec![
         "--print".to_string(),
         "--dangerously-skip-permissions".to_string(),
         "--permission-mode".to_string(),
         "bypassPermissions".to_string(),
-        prompt.to_string(),
-        "--output-format".to_string(),
-        "text".to_string(),
     ];
+    #[cfg(target_os = "windows")]
+    {
+        args.push("--input-format".to_string());
+        args.push("text".to_string());
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        args.push(prompt.to_string());
+    }
+    args.push("--output-format".to_string());
+    args.push("text".to_string());
     let mut cmd = crate::adapters::command_for_cli(&exe, &args, working_dir);
     crate::adapters::apply_extended_path(&mut cmd);
     crate::adapters::apply_shell_env(&mut cmd);
+    #[cfg(target_os = "windows")]
+    {
+        cmd.stdin(Stdio::piped());
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        cmd.stdin(Stdio::null());
+    }
     cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
 
+    #[cfg(target_os = "windows")]
+    let output = {
+        let mut child = cmd
+            .spawn()
+            .map_err(|e| format!("Failed to run claude: {}", e))?;
+        if let Some(mut stdin) = child.stdin.take() {
+            stdin
+                .write_all(prompt.as_bytes())
+                .await
+                .map_err(|e| format!("Failed to write Claude prompt: {}", e))?;
+            stdin
+                .write_all(b"\n")
+                .await
+                .map_err(|e| format!("Failed to write Claude prompt: {}", e))?;
+        }
+        child
+            .wait_with_output()
+            .await
+            .map_err(|e| format!("Failed to run claude: {}", e))?
+    };
+    #[cfg(not(target_os = "windows"))]
     let output = cmd
         .output()
         .await

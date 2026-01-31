@@ -54,23 +54,37 @@ impl CliAdapter for ClaudeCodeAdapter {
 
     fn build_command(&self, prompt: &str, working_dir: &Path, _options: CommandOptions) -> Command {
         let exe = self.path.as_deref().unwrap_or("claude");
-        let args = vec![
+        let mut args = vec![
             "--print".to_string(),
             "--dangerously-skip-permissions".to_string(),
             "--permission-mode".to_string(),
             "bypassPermissions".to_string(),
             "--verbose".to_string(),
-            prompt.to_string(),
-            "--output-format".to_string(),
-            "stream-json".to_string(),
-            "--include-partial-messages".to_string(),
         ];
+        #[cfg(target_os = "windows")]
+        {
+            args.push("--input-format".to_string());
+            args.push("text".to_string());
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            args.push(prompt.to_string());
+        }
+        args.push("--output-format".to_string());
+        args.push("stream-json".to_string());
+        args.push("--include-partial-messages".to_string());
         let mut cmd = command_for_cli(exe, &args, working_dir);
         apply_extended_path(&mut cmd);
         apply_shell_env(&mut cmd);
-        cmd.stdin(Stdio::null())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
+        #[cfg(target_os = "windows")]
+        {
+            cmd.stdin(Stdio::piped());
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            cmd.stdin(Stdio::null());
+        }
+        cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
         cmd
     }
 
@@ -81,23 +95,37 @@ impl CliAdapter for ClaudeCodeAdapter {
         _options: CommandOptions,
     ) -> Command {
         let exe = self.path.as_deref().unwrap_or("claude");
-        let args = vec![
+        let mut args = vec![
             "--print".to_string(),
             "--dangerously-skip-permissions".to_string(),
             "--permission-mode".to_string(),
             "bypassPermissions".to_string(),
             "--verbose".to_string(),
-            prompt.to_string(),
-            "--output-format".to_string(),
-            "stream-json".to_string(),
-            "--include-partial-messages".to_string(),
         ];
+        #[cfg(target_os = "windows")]
+        {
+            args.push("--input-format".to_string());
+            args.push("text".to_string());
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            args.push(prompt.to_string());
+        }
+        args.push("--output-format".to_string());
+        args.push("stream-json".to_string());
+        args.push("--include-partial-messages".to_string());
         let mut cmd = command_for_cli(exe, &args, working_dir);
         apply_extended_path(&mut cmd);
         apply_shell_env(&mut cmd);
-        cmd.stdin(Stdio::null())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
+        #[cfg(target_os = "windows")]
+        {
+            cmd.stdin(Stdio::piped());
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            cmd.stdin(Stdio::null());
+        }
+        cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
         cmd
     }
 
