@@ -145,8 +145,28 @@ impl CliAdapter for CodexAdapter {
                         is_assistant: false,
                     }
                 }
-                "thread.started" | "turn.started" | "turn.completed" | "item.delta" => {
-                    // Control events, skip
+                // Control events - skip silently
+                "thread.started" | "turn.started" | "turn.completed" | "item.delta" |
+                // Item lifecycle events - skip (we only care about item.completed with agent_message)
+                "item.started" | "item.updated" |
+                // Other item.completed types (reasoning, command_execution, file_change, etc.) - skip
+                // They are handled by the item.completed branch above, non-agent_message returns empty
+                // Meta events
+                "session.started" | "session.completed" => {
+                    ParsedLine {
+                        content: String::new(),
+                        line_type: LineType::Json,
+                        is_assistant: false,
+                    }
+                }
+                // Error events - log but don't pollute output
+                "turn.failed" | "error" => {
+                    // Extract error message for debugging, but return empty to avoid polluting brainstorm
+                    let error_msg = json.get("error")
+                        .and_then(|e| e.get("message"))
+                        .and_then(|m| m.as_str())
+                        .unwrap_or("Unknown error");
+                    eprintln!("[Codex] Error event: {}", error_msg);
                     ParsedLine {
                         content: String::new(),
                         line_type: LineType::Json,
@@ -154,13 +174,23 @@ impl CliAdapter for CodexAdapter {
                     }
                 }
                 _ => {
-                    // No type field or unknown type - pass through as text
-                    // This handles: direct brainstorm JSON, unknown events, and Loop mode output
-                    // that happens to look like JSON (safer fallback to avoid losing content)
-                    ParsedLine {
-                        content: line.to_string(),
-                        line_type: LineType::Text,
-                        is_assistant: true,
+                    // Unknown event type with a "type" field - skip to avoid polluting output
+                    // This is safer than passing through as text
+                    if !event_type.is_empty() {
+                        eprintln!("[Codex] Skipping unknown event type: {}", event_type);
+                        ParsedLine {
+                            content: String::new(),
+                            line_type: LineType::Json,
+                            is_assistant: false,
+                        }
+                    } else {
+                        // No type field - this might be direct JSON response (Loop mode or mock)
+                        // Pass through as text for backward compatibility
+                        ParsedLine {
+                            content: line.to_string(),
+                            line_type: LineType::Text,
+                            is_assistant: true,
+                        }
                     }
                 }
             }
@@ -251,20 +281,52 @@ mod tests {
     #[test]
     fn parse_output_line_skips_control_events() {
         let adapter = CodexAdapter::new();
-        for event in ["thread.started", "turn.started", "turn.completed", "item.delta"] {
+        // All known control/lifecycle events should be skipped
+        for event in [
+            "thread.started", "turn.started", "turn.completed", "item.delta",
+            "item.started", "item.updated", "session.started", "session.completed"
+        ] {
             let line = format!(r#"{{"type":"{}"}}"#, event);
             let parsed = adapter.parse_output_line(&line);
             assert!(parsed.content.is_empty(), "should skip {}", event);
+            assert!(!parsed.is_assistant, "should not mark {} as assistant", event);
         }
     }
 
     #[test]
-    fn parse_output_line_passes_through_unknown_json() {
+    fn parse_output_line_skips_error_events() {
         let adapter = CodexAdapter::new();
+        // turn.failed and error events should be skipped (not pollute output)
+        let turn_failed = r#"{"type":"turn.failed","error":{"message":"Rate limit exceeded"}}"#;
+        let parsed = adapter.parse_output_line(turn_failed);
+        assert!(parsed.content.is_empty(), "turn.failed should be skipped");
+        assert!(!parsed.is_assistant);
+
+        let error_event = r#"{"type":"error","error":{"message":"Connection failed"}}"#;
+        let parsed = adapter.parse_output_line(error_event);
+        assert!(parsed.content.is_empty(), "error should be skipped");
+        assert!(!parsed.is_assistant);
+    }
+
+    #[test]
+    fn parse_output_line_skips_unknown_typed_events() {
+        let adapter = CodexAdapter::new();
+        // Unknown events WITH a type field should be skipped
+        let line = r#"{"type":"future.new.event","data":"something"}"#;
+        let parsed = adapter.parse_output_line(line);
+        assert!(parsed.content.is_empty(), "unknown typed event should be skipped");
+        assert!(!parsed.is_assistant);
+    }
+
+    #[test]
+    fn parse_output_line_passes_through_typeless_json() {
+        let adapter = CodexAdapter::new();
+        // JSON without "type" field (like mock data or Loop mode) should pass through
         let line = r#"{"question":"Hi","options":[]}"#;
         let parsed = adapter.parse_output_line(line);
         assert_eq!(parsed.content, line);
         assert_eq!(parsed.line_type, super::LineType::Text);
+        assert!(parsed.is_assistant);
     }
 
     #[test]
