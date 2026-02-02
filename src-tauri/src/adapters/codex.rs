@@ -2,6 +2,7 @@ use super::{
     apply_extended_path, apply_shell_env, command_for_cli, hide_console_window, resolve_cli_path,
     CliAdapter, CommandOptions, LineType, ParsedLine,
 };
+use serde_json::Value;
 use crate::storage::models::CliType;
 use async_trait::async_trait;
 use std::path::Path;
@@ -34,6 +35,7 @@ impl CodexAdapter {
         let mut args = vec![
             "exec".to_string(),
             "--dangerously-bypass-approvals-and-sandbox".to_string(),
+            "--json".to_string(),  // Output JSONL for parsing
         ];
         if options.skip_git_repo_check {
             args.push("--skip-git-repo-check".to_string());
@@ -117,10 +119,56 @@ impl CliAdapter for CodexAdapter {
     }
 
     fn parse_output_line(&self, line: &str) -> ParsedLine {
-        ParsedLine {
-            content: line.to_string(),
-            line_type: LineType::Text,
-            is_assistant: true, // All Codex output is treated as assistant
+        // Codex --json outputs JSONL, parse item.completed events for agent_message text
+        if let Ok(json) = serde_json::from_str::<Value>(line) {
+            let event_type = json.get("type").and_then(|t| t.as_str()).unwrap_or("");
+            
+            match event_type {
+                "item.completed" => {
+                    // Extract text from agent_message items
+                    if let Some(item) = json.get("item") {
+                        let item_type = item.get("type").and_then(|t| t.as_str()).unwrap_or("");
+                        if item_type == "agent_message" {
+                            if let Some(text) = item.get("text").and_then(|t| t.as_str()) {
+                                return ParsedLine {
+                                    content: text.to_string(),
+                                    line_type: LineType::Json,
+                                    is_assistant: true,
+                                };
+                            }
+                        }
+                    }
+                    // Non-message item.completed, skip
+                    ParsedLine {
+                        content: String::new(),
+                        line_type: LineType::Json,
+                        is_assistant: false,
+                    }
+                }
+                "thread.started" | "turn.started" | "turn.completed" | "item.delta" => {
+                    // Control events, skip
+                    ParsedLine {
+                        content: String::new(),
+                        line_type: LineType::Json,
+                        is_assistant: false,
+                    }
+                }
+                _ => {
+                    // Unknown JSON event, pass through
+                    ParsedLine {
+                        content: line.to_string(),
+                        line_type: LineType::Json,
+                        is_assistant: true,
+                    }
+                }
+            }
+        } else {
+            // Not JSON, treat as plain text (fallback for non --json mode)
+            ParsedLine {
+                content: line.to_string(),
+                line_type: LineType::Text,
+                is_assistant: true,
+            }
         }
     }
 }
@@ -144,7 +192,7 @@ mod tests {
         let args = CodexAdapter::readonly_args("hello", CommandOptions::default());
         assert_eq!(
             args,
-            vec!["exec", "--dangerously-bypass-approvals-and-sandbox", "hello"]
+            vec!["exec", "--dangerously-bypass-approvals-and-sandbox", "--json", "hello"]
         );
     }
 
@@ -180,6 +228,7 @@ mod tests {
             vec![
                 "exec",
                 "--dangerously-bypass-approvals-and-sandbox",
+                "--json",
                 "--skip-git-repo-check",
                 "hello"
             ]
