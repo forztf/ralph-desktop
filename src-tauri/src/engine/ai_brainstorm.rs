@@ -498,7 +498,7 @@ async fn call_claude_cli(working_dir: &Path, prompt: &str) -> Result<String, Str
         args.push(prompt.to_string());
     }
     args.push("--output-format".to_string());
-    args.push("text".to_string());
+    args.push("json".to_string());
     let mut cmd = crate::adapters::command_for_cli(&exe, &args, working_dir);
     crate::adapters::apply_extended_path(&mut cmd);
     crate::adapters::apply_shell_env(&mut cmd);
@@ -556,7 +556,24 @@ async fn call_claude_cli(working_dir: &Path, prompt: &str) -> Result<String, Str
         return Err(stderr.trim().to_string());
     }
 
-    Ok(stdout)
+    Ok(unwrap_claude_json_output(&stdout))
+}
+
+/// Claude `--output-format json` 输出格式:
+/// {"type":"result","subtype":"success","result":"<model text>","is_error":false,...}
+/// 提取 `result` 字段供后续 `parse_ai_response` 使用。
+/// 若格式不匹配（旧版 CLI 或 text 模式），原样返回。
+fn unwrap_claude_json_output(raw: &str) -> String {
+    #[derive(Deserialize)]
+    struct ClaudeJsonOutput {
+        result: Option<String>,
+    }
+    if let Ok(obj) = serde_json::from_str::<ClaudeJsonOutput>(raw.trim()) {
+        if let Some(result) = obj.result {
+            return result;
+        }
+    }
+    raw.to_string()
 }
 
 async fn call_brainstorm_cli(
@@ -771,7 +788,7 @@ echo '{"question":"Hi","description":null,"options":[],"multiSelect":false,"allo
         write_executable(&bin_dir.join("codex"), codex_script);
 
         let claude_script = r#"#!/usr/bin/env bash
-echo 'not-json'
+echo '{"type":"result","subtype":"success","result":"not-json","is_error":false}'
 "#;
         write_executable(&bin_dir.join("claude"), claude_script);
 
@@ -860,5 +877,45 @@ echo 'not-json'
     fn truncate_to_title_empty_string() {
         let result = super::truncate_to_title("", 15);
         assert_eq!(result, "");
+    }
+
+    // --- Unit tests for unwrap_claude_json_output ---
+
+    #[test]
+    fn unwrap_claude_json_output_extracts_result_field() {
+        let raw = r#"{"type":"result","subtype":"success","result":"hello world","is_error":false}"#;
+        let result = super::unwrap_claude_json_output(raw);
+        assert_eq!(result, "hello world");
+    }
+
+    #[test]
+    fn unwrap_claude_json_output_extracts_json_content() {
+        let inner = r#"{"question":"What?","options":[],"multiSelect":false,"allowOther":false,"isComplete":false}"#;
+        let raw = format!(r#"{{"type":"result","subtype":"success","result":"{escaped}","is_error":false}}"#,
+            escaped = inner.replace('"', r#"\""#));
+        let result = super::unwrap_claude_json_output(&raw);
+        assert_eq!(result, inner);
+    }
+
+    #[test]
+    fn unwrap_claude_json_output_fallback_on_plain_text() {
+        // 旧版 CLI 或 text 模式直接输出原始文本，应原样返回
+        let raw = "not-json";
+        let result = super::unwrap_claude_json_output(raw);
+        assert_eq!(result, "not-json");
+    }
+
+    #[test]
+    fn unwrap_claude_json_output_fallback_on_missing_result_field() {
+        let raw = r#"{"type":"error","message":"something went wrong"}"#;
+        let result = super::unwrap_claude_json_output(raw);
+        assert_eq!(result, raw);
+    }
+
+    #[test]
+    fn unwrap_claude_json_output_trims_whitespace() {
+        let raw = "  {\"type\":\"result\",\"subtype\":\"success\",\"result\":\"trimmed\",\"is_error\":false}  ";
+        let result = super::unwrap_claude_json_output(raw);
+        assert_eq!(result, "trimmed");
     }
 }
